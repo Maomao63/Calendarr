@@ -217,7 +217,7 @@ function hideHoverPreview() {
 }
 
 function showHoverPreview(event, anchor) {
-  if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches || !anchor.isConnected) return;
+  if (!anchor.isConnected) return;
   const previewType = document.querySelector("#hoverPreviewType");
   previewType.textContent = event.service === "sonarr" ? "Serienepisode" : "Film";
   previewType.className = `pill ${event.service}`;
@@ -373,7 +373,6 @@ function render() {
       dayEvents.forEach((event) => {
         const dot = document.createElement("i");
         dot.className = `release-dot ${event.service}`;
-        dot.title = `${event.title} — ${event.subtitle}`;
         dot.style.background = eventColor(event);
         dot.style.boxShadow = `0 0 8px ${eventColor(event)}88`;
         attachHoverPreview(dot, event);
@@ -395,7 +394,6 @@ function render() {
     dayEvents.forEach((event) => {
       const button = document.createElement("button");
       button.className = `event ${event.service}`;
-      button.title = `${event.title} — ${event.subtitle}`;
       button.innerHTML = `<i class="event-bar"></i><span class="event-copy"><span class="event-title"></span><span class="event-subtitle"></span></span>`;
       button.querySelector(".event-title").textContent = event.title;
       button.querySelector(".event-subtitle").textContent = event.subtitle;
