@@ -40,8 +40,7 @@ button { border:1px solid var(--line); background:rgba(20,25,38,.9); color:var(-
 @media(max-width:750px){ main{width:100%;padding:16px} header{align-items:flex-start;flex-direction:column}.controls{width:100%}.month-controls{flex:1;justify-content:space-between}.calendar-shell{overflow-x:auto}.weekdays,.calendar{min-width:760px}.detail-card{grid-template-columns:1fr}.detail-poster{height:180px}.detail-copy{padding:28px 22px}.legend .status{display:none} }
 @media(max-width:600px){.config-card{max-height:calc(100vh - 12px);border-radius:14px}.config-header{padding:18px 18px 14px}.config-header p{display:none}.config-tabs{padding:9px 10px 0}.config-panel{padding:10px}.instance-fields{grid-template-columns:1fr}.instance-field.wide{grid-column:auto}.config-actions{padding:10px}.config-actions button{flex:1}}
 
-body.embedded { height:100vh; min-height:0; overflow:hidden; background:transparent; }
-.embedded .ambient { display:none; }
+body.embedded { height:100vh; min-height:0; overflow:hidden; }
 .embedded main { display:flex; flex-direction:column; width:100%; height:100vh; padding:10px; }
 .embedded header { flex:0 0 auto; flex-direction:row; align-items:center; margin-bottom:7px; gap:12px; }
 .embedded .brand { display:none; }
