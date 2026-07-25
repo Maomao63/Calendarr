@@ -66,6 +66,8 @@ const status = document.querySelector("#status");
 const modal = document.querySelector("#details");
 const dayModal = document.querySelector("#dayDetails");
 const configModal = document.querySelector("#configModal");
+const hoverPreview = document.querySelector("#hoverPreview");
+let hoverPreviewTimer;
 
 document.body.classList.toggle("embedded", isEmbedded);
 
@@ -208,7 +210,57 @@ async function loadEvents() {
   render();
 }
 
+function hideHoverPreview() {
+  window.clearTimeout(hoverPreviewTimer);
+  hoverPreview.hidden = true;
+  hoverPreview.setAttribute("aria-hidden", "true");
+}
+
+function showHoverPreview(event, anchor) {
+  if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches || !anchor.isConnected) return;
+  const previewType = document.querySelector("#hoverPreviewType");
+  previewType.textContent = event.service === "sonarr" ? "Serienepisode" : "Film";
+  previewType.className = `pill ${event.service}`;
+  document.querySelector("#hoverPreviewTitle").textContent = event.title;
+  document.querySelector("#hoverPreviewSubtitle").textContent = event.subtitle;
+  document.querySelector("#hoverPreviewRelease").textContent = event.releaseTime
+    ? `Erscheint am ${event.releaseDate} um ${event.releaseTime}`
+    : `Veröffentlichung am ${event.releaseDate}`;
+  document.querySelector("#hoverPreviewOverview").textContent = event.overview;
+  document.querySelector("#hoverPreviewPoster").style.backgroundImage = event.poster
+    ? `linear-gradient(0deg,rgba(10,14,22,.3),transparent),url("${event.poster}")`
+    : "";
+  hoverPreview.hidden = false;
+  hoverPreview.setAttribute("aria-hidden", "false");
+
+  window.requestAnimationFrame(() => {
+    if (hoverPreview.hidden || !anchor.isConnected) return;
+    const anchorRect = anchor.getBoundingClientRect();
+    const previewRect = hoverPreview.getBoundingClientRect();
+    const gap = 10;
+    let left = anchorRect.right + gap;
+    if (left + previewRect.width > window.innerWidth - 8) {
+      left = anchorRect.left - previewRect.width - gap;
+    }
+    left = Math.max(8, Math.min(left, window.innerWidth - previewRect.width - 8));
+    const top = Math.max(8, Math.min(anchorRect.top, window.innerHeight - previewRect.height - 8));
+    hoverPreview.style.left = `${left}px`;
+    hoverPreview.style.top = `${top}px`;
+  });
+}
+
+function attachHoverPreview(anchor, event) {
+  anchor.addEventListener("mouseenter", () => {
+    window.clearTimeout(hoverPreviewTimer);
+    hoverPreviewTimer = window.setTimeout(() => showHoverPreview(event, anchor), 180);
+  });
+  anchor.addEventListener("mouseleave", hideHoverPreview);
+  anchor.addEventListener("focus", () => showHoverPreview(event, anchor));
+  anchor.addEventListener("blur", hideHoverPreview);
+}
+
 function openDetails(event) {
+  hideHoverPreview();
   const detailType = document.querySelector("#detailType");
   detailType.textContent = event.service === "sonarr" ? "Serienepisode" : "Film";
   detailType.className = `pill ${event.service}`;
@@ -324,6 +376,7 @@ function render() {
         dot.title = `${event.title} — ${event.subtitle}`;
         dot.style.background = eventColor(event);
         dot.style.boxShadow = `0 0 8px ${eventColor(event)}88`;
+        attachHoverPreview(dot, event);
         dots.append(dot);
       });
       day.append(dots);
@@ -347,6 +400,7 @@ function render() {
       button.querySelector(".event-title").textContent = event.title;
       button.querySelector(".event-subtitle").textContent = event.subtitle;
       button.querySelector(".event-bar").style.background = eventColor(event);
+      attachHoverPreview(button, event);
       button.addEventListener("click", () => openDetails(event));
       eventList.append(button);
     });
@@ -622,13 +676,18 @@ document.addEventListener("click", (event) => {
 });
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
+    hideHoverPreview();
     modal.hidden = true;
     dayModal.hidden = true;
     configModal.hidden = true;
     setColorPanel(false);
   }
 });
-window.addEventListener("resize", render);
+window.addEventListener("scroll", hideHoverPreview, true);
+window.addEventListener("resize", () => {
+  hideHoverPreview();
+  render();
+});
 const refreshIntervalMinutes = Number(appSettings.refreshIntervalMinutes) > 0 ? Number(appSettings.refreshIntervalMinutes) : 5;
 window.setInterval(() => { if (!document.hidden) void loadEvents(); }, refreshIntervalMinutes * 60 * 1000);
 document.addEventListener("visibilitychange", () => {
