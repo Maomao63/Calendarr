@@ -1,6 +1,6 @@
 services:
   calendarr:
-    image: ${CALENDARR_IMAGE:-ghcr.io/maomao63/calendarr:latest}
+    image: ghcr.io/maomao63/calendarr:latest
     pull_policy: always
     container_name: calendarr
     restart: unless-stopped
@@ -11,15 +11,10 @@ services:
       CONFIG_FILE: /config/config.json
     volumes:
       - "${CALENDARR_CONFIG_PATH:-./config}:/config:ro"
-    networks:
-      - media
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
-
-networks:
-  media:
-    external: true
-    name: ${MEDIA_NETWORK:-media}

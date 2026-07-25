@@ -40,7 +40,7 @@ cd calendarr
 ```yaml
 services:
   calendarr:
-    image: ${CALENDARR_IMAGE:-ghcr.io/maomao63/calendarr:latest}
+    image: ghcr.io/maomao63/calendarr:latest
     pull_policy: always
     container_name: calendarr
     restart: unless-stopped
@@ -51,18 +51,13 @@ services:
       CONFIG_FILE: /config/config.json
     volumes:
       - "${CALENDARR_CONFIG_PATH:-./config}:/config:ro"
-    networks:
-      - media
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
-
-networks:
-  media:
-    external: true
-    name: ${MEDIA_NETWORK:-media}
 ```
 
 ### 3. `.env` erstellen
@@ -70,17 +65,13 @@ networks:
 Die `.env` muss im selben Verzeichnis wie `compose.yaml` liegen:
 
 ```env
-CALENDARR_IMAGE=ghcr.io/maomao63/calendarr:latest
 CALENDARR_CONFIG_PATH=./config
-MEDIA_NETWORK=media
 CALENDARR_PORT=3000
 ```
 
 | Variable | Beschreibung |
 | --- | --- |
-| `CALENDARR_IMAGE` | Zu verwendendes Docker-Image |
 | `CALENDARR_CONFIG_PATH` | Verzeichnis mit der `config.json` auf dem Docker-Host |
-| `MEDIA_NETWORK` | Gemeinsames Docker-Netzwerk von Calendarr, Sonarr und Radarr |
 | `CALENDARR_PORT` | Von außen erreichbarer Port |
 
 Der Speicherort der Konfiguration ist frei wählbar. Für einen absoluten Pfad
@@ -100,14 +91,14 @@ Verzeichnis wird schreibgeschützt unter `/config` in den Container eingebunden.
   "sonarrInstances": [
     {
       "name": "Sonarr",
-      "url": "http://sonarr:8989",
+      "url": "http://host.docker.internal:8989",
       "apiKey": "DEIN_SONARR_API_KEY"
     }
   ],
   "radarrInstances": [
     {
       "name": "Radarr",
-      "url": "http://radarr:7878",
+      "url": "http://host.docker.internal:7878",
       "apiKey": "DEIN_RADARR_API_KEY"
     }
   ],
@@ -127,20 +118,18 @@ Verzeichnis wird schreibgeschützt unter `/config` in den Container eingebunden.
 Die API-Keys befinden sich in Sonarr und Radarr jeweils unter
 `Einstellungen > Allgemein > Sicherheit`.
 
-### 5. Docker-Netzwerk vorbereiten
+### 5. Verbindung zu Sonarr und Radarr
 
-Calendarr muss Sonarr und Radarr über ein gemeinsames Docker-Netzwerk erreichen
-können. Existiert das in `.env` eingetragene Netzwerk noch nicht, wird es einmalig
-angelegt:
+Ein zusätzliches Docker-Netzwerk ist nicht erforderlich. Calendarr erreicht
+Sonarr und Radarr über den Docker-Host:
 
-```sh
-docker network create media
+```json
+"url": "http://host.docker.internal:8989"
 ```
 
-Falls Sonarr und Radarr bereits ein gemeinsames Netzwerk verwenden, wird dessen
-Name stattdessen bei `MEDIA_NETWORK` eingetragen. In der `config.json` können
-dann die Container- oder Servicenamen verwendet werden, beispielsweise
-`http://sonarr:8989`.
+Die Ports von Sonarr und Radarr müssen dafür auf dem Docker-Host veröffentlicht
+sein, normalerweise `8989` und `7878`. Alternativ kann in `config.json` eine
+direkt erreichbare IP-Adresse oder Domain eingetragen werden.
 
 ### 6. Calendarr starten
 
