@@ -58,7 +58,6 @@ const calendar = document.querySelector("#calendar");
 const weekdays = document.querySelector("#weekdays");
 const periodTitle = document.querySelector("#monthTitle");
 const status = document.querySelector("#status");
-const modal = document.querySelector("#details");
 const dayModal = document.querySelector("#dayDetails");
 const configModal = document.querySelector("#configModal");
 const hoverPreview = document.querySelector("#hoverPreview");
@@ -325,30 +324,9 @@ function attachHoverPreview(anchor, event) {
 
 function openDetails(event) {
   hideHoverPreview();
-  const detailType = document.querySelector("#detailType");
-  detailType.textContent = event.service === "sonarr" ? "Serienepisode" : "Film";
-  detailType.className = `pill ${event.service}`;
-  document.querySelector("#detailTitle").textContent = event.title;
-  document.querySelector("#detailSubtitle").textContent = event.subtitle;
-  document.querySelector("#detailRelease").textContent = event.releaseTime
-    ? `Erscheint am ${event.releaseDate} um ${event.releaseTime}`
-    : `Veröffentlichung am ${event.releaseDate}`;
-  document.querySelector("#detailOverview").textContent = event.overview;
-  const detailOverview = document.querySelector("#detailOverview");
-  const overviewToggle = document.querySelector("#overviewToggle");
-  detailOverview.classList.add("collapsed");
-  overviewToggle.textContent = "Mehr anzeigen";
-  overviewToggle.hidden = true;
-  window.requestAnimationFrame(() => {
-    overviewToggle.hidden = detailOverview.scrollHeight <= detailOverview.clientHeight;
-  });
-  document.querySelector("#detailPoster").style.backgroundImage = event.poster ? `linear-gradient(0deg,rgba(10,14,22,.3),transparent),url("${event.poster}")` : "";
-  const sourceLink = document.querySelector("#detailSource");
-  sourceLink.hidden = !event.sourceUrl;
-  sourceLink.href = event.sourceUrl ?? "";
-  sourceLink.textContent = `In ${event.service === "sonarr" ? "Sonarr" : "Radarr"} öffnen ↗`;
-  sourceLink.className = `source-link ${event.service}`;
-  modal.hidden = false;
+  if (event.sourceUrl) {
+    window.open(event.sourceUrl, "_blank", "noopener,noreferrer");
+  }
 }
 
 function openDayDetails(date, events) {
@@ -500,13 +478,6 @@ function toggleToolbar() {
   state.toolbarCollapsed = !state.toolbarCollapsed;
   try { window.localStorage.setItem("calendarr-toolbar-collapsed", String(state.toolbarCollapsed)); } catch {}
   render();
-}
-
-function toggleOverview() {
-  const detailOverview = document.querySelector("#detailOverview");
-  const overviewToggle = document.querySelector("#overviewToggle");
-  const collapsed = detailOverview.classList.toggle("collapsed");
-  overviewToggle.textContent = collapsed ? "Mehr anzeigen" : "Weniger anzeigen";
 }
 
 function configListKey(service) {
@@ -696,9 +667,6 @@ document.querySelector("#todayButton").addEventListener("click", () => { state.d
 document.querySelector("#refreshButton").addEventListener("click", loadEvents);
 document.querySelector("#settingsButton").addEventListener("click", openConfig);
 document.querySelector("#toolbarToggle").addEventListener("click", toggleToolbar);
-document.querySelector("#overviewToggle").addEventListener("click", toggleOverview);
-document.querySelector("#closeDetails").addEventListener("click", () => { modal.hidden = true; });
-document.querySelector("#detailBackdrop").addEventListener("click", () => { modal.hidden = true; });
 document.querySelector("#closeDayDetails").addEventListener("click", () => { dayModal.hidden = true; });
 document.querySelector("#dayBackdrop").addEventListener("click", () => { dayModal.hidden = true; });
 document.querySelector("#closeConfig").addEventListener("click", closeConfig);
@@ -714,7 +682,7 @@ document.querySelectorAll("[data-add-instance]").forEach((button) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     hideHoverPreview();
-    modal.hidden = true;
+    hideDayListPreview();
     dayModal.hidden = true;
     configModal.hidden = true;
   }
