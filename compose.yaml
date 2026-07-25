@@ -10,7 +10,7 @@ services:
       PORT: 3000
       CONFIG_FILE: /config/config.json
     volumes:
-      - "${CALENDARR_CONFIG_PATH:-./config}:/config:ro"
+      - "${CALENDARR_CONFIG_PATH:-./config}:/config"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:

@@ -50,7 +50,7 @@ services:
       PORT: 3000
       CONFIG_FILE: /config/config.json
     volumes:
-      - "${CALENDARR_CONFIG_PATH:-./config}:/config:ro"
+      - "${CALENDARR_CONFIG_PATH:-./config}:/config"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
@@ -81,10 +81,36 @@ kann beispielsweise Folgendes verwendet werden:
 CALENDARR_CONFIG_PATH=/srv/docker/calendarr
 ```
 
-In diesem Verzeichnis muss direkt die Datei `config.json` liegen. Das
-Verzeichnis wird schreibgeschützt unter `/config` in den Container eingebunden.
+Beim ersten Start legt Calendarr in diesem Verzeichnis automatisch eine
+`config.json` mit Beispielwerten an.
 
-### 4. `config/config.json` erstellen
+### 4. Calendarr starten
+
+```sh
+docker compose up -d
+```
+
+Beim ersten Start wird die Datei
+`${CALENDARR_CONFIG_PATH}/config.json` automatisch erstellt. Mit dem
+Standardpfad liegt sie unter:
+
+```text
+./config/config.json
+```
+
+Für Unraid kann zum Beispiel folgender Pfad in `.env` verwendet werden:
+
+```env
+CALENDARR_CONFIG_PATH=/mnt/user/appdata/calendarr
+```
+
+Die automatisch erzeugte Datei liegt dann unter:
+
+```text
+/mnt/user/appdata/calendarr/config.json
+```
+
+### 5. `config.json` bearbeiten
 
 ```json
 {
@@ -118,7 +144,10 @@ Verzeichnis wird schreibgeschützt unter `/config` in den Container eingebunden.
 Die API-Keys befinden sich in Sonarr und Radarr jeweils unter
 `Einstellungen > Allgemein > Sicherheit`.
 
-### 5. Verbindung zu Sonarr und Radarr
+Nach dem Speichern die Calendarr-Seite aktualisieren. Ein Neustart des
+Containers ist für geänderte API-Keys nicht erforderlich.
+
+### 6. Verbindung zu Sonarr und Radarr
 
 Ein zusätzliches Docker-Netzwerk ist nicht erforderlich. Calendarr erreicht
 Sonarr und Radarr über den Docker-Host:
@@ -130,12 +159,6 @@ Sonarr und Radarr über den Docker-Host:
 Die Ports von Sonarr und Radarr müssen dafür auf dem Docker-Host veröffentlicht
 sein, normalerweise `8989` und `7878`. Alternativ kann in `config.json` eine
 direkt erreichbare IP-Adresse oder Domain eingetragen werden.
-
-### 6. Calendarr starten
-
-```sh
-docker compose up -d
-```
 
 Status prüfen:
 
