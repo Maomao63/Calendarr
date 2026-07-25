@@ -216,7 +216,7 @@ function hideHoverPreview() {
   hoverPreview.setAttribute("aria-hidden", "true");
 }
 
-function showHoverPreview(event, anchor) {
+function showHoverPreview(event, anchor, clientX, clientY) {
   if (!anchor.isConnected) return;
   const previewType = document.querySelector("#hoverPreviewType");
   previewType.textContent = event.service === "sonarr" ? "Serienepisode" : "Film";
@@ -235,27 +235,45 @@ function showHoverPreview(event, anchor) {
 
   window.requestAnimationFrame(() => {
     if (hoverPreview.hidden || !anchor.isConnected) return;
-    const anchorRect = anchor.getBoundingClientRect();
     const previewRect = hoverPreview.getBoundingClientRect();
-    const gap = 10;
-    let left = anchorRect.right + gap;
+    const gap = 15;
+    let left = clientX + gap;
     if (left + previewRect.width > window.innerWidth - 8) {
-      left = anchorRect.left - previewRect.width - gap;
+      left = clientX - previewRect.width - gap;
     }
-    left = Math.max(8, Math.min(left, window.innerWidth - previewRect.width - 8));
-    const top = Math.max(8, Math.min(anchorRect.top, window.innerHeight - previewRect.height - 8));
+    left = Math.max(8, left);
+    
+    let top = clientY - (previewRect.height / 2);
+    top = Math.max(8, Math.min(top, window.innerHeight - previewRect.height - 8));
+    
     hoverPreview.style.left = `${left}px`;
     hoverPreview.style.top = `${top}px`;
   });
 }
 
 function attachHoverPreview(anchor, event) {
-  anchor.addEventListener("mouseenter", () => {
-    window.clearTimeout(hoverPreviewTimer);
-    hoverPreviewTimer = window.setTimeout(() => showHoverPreview(event, anchor), 180);
+  let lastMouseX = 0;
+  let lastMouseY = 0;
+
+  anchor.addEventListener("mousemove", (e) => {
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
   });
+
+  anchor.addEventListener("mouseenter", (e) => {
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+    window.clearTimeout(hoverPreviewTimer);
+    hoverPreviewTimer = window.setTimeout(() => showHoverPreview(event, anchor, lastMouseX, lastMouseY), 180);
+  });
+  
   anchor.addEventListener("mouseleave", hideHoverPreview);
-  anchor.addEventListener("focus", () => showHoverPreview(event, anchor));
+  
+  anchor.addEventListener("focus", () => {
+    const rect = anchor.getBoundingClientRect();
+    showHoverPreview(event, anchor, rect.left + rect.width / 2, rect.top + rect.height / 2);
+  });
+  
   anchor.addEventListener("blur", hideHoverPreview);
 }
 
