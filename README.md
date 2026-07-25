@@ -1,270 +1,132 @@
-# Calendarr
+<div align="center">
+  <img src="https://raw.githubusercontent.com/Maomao63/Calendarr/main/docs/logo.png" alt="Calendarr Logo" width="120" />
+  <h1>Calendarr</h1>
+  <p>A beautiful, minimalistic, and modern calendar for your Sonarr and Radarr instances.</p>
+</div>
 
-Ein übersichtlicher Release-Kalender für Sonarr und Radarr, optimiert für Docker
-und die Einbindung als Homarr-Iframe.
+---
 
-## Funktionen
+## ✨ Features
 
-- Gemeinsamer Kalender für Sonarr-Episoden und Radarr-Filme
-- Mehrere Sonarr- und Radarr-Instanzen
-- Tages-, 3-Tage-, Wochen- und Monatsansicht
-- Detailansicht mit Poster, Beschreibung und direktem Sonarr-/Radarr-Link
-- Kompakte Punkte- oder Namensdarstellung
-- Anpassbare Farben und automatische Aktualisierung
-- Zahnrad-Dialog zum Verwalten beliebig vieler Sonarr-/Radarr-Instanzen
-- Eigene Kalenderfarbe pro Instanz
-- Deutsche Oberfläche und konfigurierbares Datumsformat
-- Persistente Konfiguration mit API-Keys außerhalb des Images
-- Docker-Images für `linux/amd64` und `linux/arm64`
-- Für Homarr und andere Iframes optimiertes Layout
+- **Multi-Instance Support**: Connect as many Sonarr and Radarr instances as you need.
+- **Modern UI**: A sleek, dark-themed interface with glassmorphism and ambient glows.
+- **Responsive & Dynamic**: Works perfectly on mobile, tablet, and desktop.
+- **Embedded Mode**: Perfectly integrates into dashboards like [Homarr](https://homarr.dev/), [Homepage](https://gethomepage.dev/), or [Dashy](https://dashy.to/) using an iframe.
+- **Multiple Views**: Switch between Name view and Dot view.
+- **No Database**: Completely stateless on the backend—everything is stored in a simple `config.json`. Configuration is handled entirely via the built-in UI!
+- **Direct Links**: Click on any release to instantly open it in the respective Sonarr/Radarr instance.
 
-## Installation mit Docker Compose
+---
 
-Für die Installation werden drei Dateien benötigt:
+## 📸 Screenshots
 
-```text
-calendarr/
-├── compose.yaml
-├── .env
-└── config/
-    └── config.json
-```
+*(Add screenshots here)*
 
-### 1. Verzeichnisse anlegen
+| Month View | Dots View |
+|:---:|:---:|
+| `<img src="https://via.placeholder.com/600x350/121722/ffffff?text=Month+View" alt="Month View" width="400"/>` | `<img src="https://via.placeholder.com/600x350/121722/ffffff?text=Dots+View" alt="Dots View" width="400"/>` |
 
-```sh
-mkdir -p calendarr/config
-cd calendarr
-```
+| Embedded in Dashboard | Settings Modal |
+|:---:|:---:|
+| `<img src="https://via.placeholder.com/600x350/121722/ffffff?text=Dashboard+Iframe" alt="Iframe View" width="400"/>` | `<img src="https://via.placeholder.com/600x350/121722/ffffff?text=Configuration" alt="Settings" width="400"/>` |
 
-### 2. `compose.yaml` erstellen
+---
+
+## 🚀 Getting Started (Docker)
+
+Calendarr is built to be run inside a Docker container.
+
+### Docker Compose (Recommended)
+
+Create a `docker-compose.yml` file:
 
 ```yaml
 services:
   calendarr:
     image: ghcr.io/maomao63/calendarr:latest
-    pull_policy: always
     container_name: calendarr
-    restart: unless-stopped
     ports:
-      - "${CALENDARR_PORT:-3000}:3000"
-    environment:
-      PORT: 3000
-      CONFIG_FILE: /config/config.json
+      - 3000:3000
     volumes:
-      - "${CALENDARR_CONFIG_PATH:-./config}:/config"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+      - ./config:/config
+    restart: unless-stopped
 ```
 
-### 3. `.env` erstellen
+Run it using:
 
-Die `.env` muss im selben Verzeichnis wie `compose.yaml` liegen:
-
-```env
-CALENDARR_CONFIG_PATH=./config
-CALENDARR_PORT=3000
+```bash
+docker-compose up -d
 ```
 
-| Variable | Beschreibung |
-| --- | --- |
-| `CALENDARR_CONFIG_PATH` | Verzeichnis mit der `config.json` auf dem Docker-Host |
-| `CALENDARR_PORT` | Von außen erreichbarer Port |
+### Docker CLI
 
-Der Speicherort der Konfiguration ist frei wählbar. Für einen absoluten Pfad
-kann beispielsweise Folgendes verwendet werden:
-
-```env
-CALENDARR_CONFIG_PATH=/srv/docker/calendarr
+```bash
+docker run -d \
+  --name calendarr \
+  -p 3000:3000 \
+  -v ./config:/config \
+  --restart unless-stopped \
+  ghcr.io/maomao63/calendarr:latest
 ```
 
-Beim ersten Start legt Calendarr in diesem Verzeichnis automatisch eine
-`config.json` mit Beispielwerten an.
+---
 
-### 4. Calendarr starten
+## ⚙️ Configuration
 
-```sh
-docker compose up -d
-```
+You do **not** need to edit any files manually! 
 
-Beim ersten Start wird die Datei
-`${CALENDARR_CONFIG_PATH}/config.json` automatisch erstellt. Mit dem
-Standardpfad liegt sie unter:
+1. Start the container.
+2. Open Calendarr in your browser at `http://localhost:3000`.
+3. Click the **Settings/Gear icon** in the top right corner.
+4. Add your Sonarr and Radarr instances:
+   - Provide a **Name**
+   - Provide the **URL** (e.g., `http://192.168.1.100:8989`)
+   - Provide your **API Key**
+   - Select a distinct **Color** for the calendar dots.
+
+All configuration is automatically securely saved to `/config/config.json`.
+
+---
+
+## 🛠️ Dashboard Integration (Iframe)
+
+Calendarr is optimized to be embedded into your favorite homelab dashboard. When loaded in an iframe, Calendarr automatically detects it and switches to a minimalistic UI without backgrounds, blending perfectly into your dashboard.
+
+### Example for Homarr
+
+Add an **Iframe Widget** to your Homarr dashboard with the following URL:
 
 ```text
-./config/config.json
+http://<your-calendarr-ip>:3000/
 ```
 
-Für Unraid kann zum Beispiel folgender Pfad in `.env` verwendet werden:
+**Tip:** Ensure the iframe block in your dashboard is large enough to display the calendar grid (e.g., at least 4x4 or 6x4 blocks).
 
-```env
-CALENDARR_CONFIG_PATH=/mnt/user/appdata/calendarr
-```
+---
 
-Die automatisch erzeugte Datei liegt dann unter:
+## 🔧 Building from Source
 
-```text
-/mnt/user/appdata/calendarr/config.json
-```
+If you want to run it without Docker or develop locally:
 
-### 5. Instanzen im Kalender einrichten
+```bash
+# Clone the repository
+git clone https://github.com/Maomao63/Calendarr.git
+cd Calendarr
 
-Im Kalender oben rechts das Zahnrad **⚙** öffnen. Dort stehen getrennte Tabs
-für Sonarr und Radarr zur Verfügung. Mit **+ Instanz hinzufügen** können
-beliebig viele Instanzen angelegt werden.
+# Install dependencies
+npm install
 
-Pro Instanz werden folgende Angaben gespeichert:
-
-- frei wählbarer Name
-- URL oder IP inklusive Port
-- API-Key
-- individuelle Punktfarbe im Kalender
-
-Beim Speichern wird die gemountete `config.json` automatisch aktualisiert.
-Bereits gespeicherte API-Keys werden im Browser nicht angezeigt. Bleibt das
-API-Key-Feld einer vorhandenen Instanz leer, wird der gespeicherte Key
-beibehalten.
-
-Die Datei kann alternativ weiterhin manuell bearbeitet werden:
-
-```json
-{
-  "sonarrInstances": [
-    {
-      "name": "Sonarr",
-      "url": "http://host.docker.internal:8989",
-      "apiKey": "DEIN_SONARR_API_KEY",
-      "color": "#55d6be"
-    }
-  ],
-  "radarrInstances": [
-    {
-      "name": "Radarr",
-      "url": "http://host.docker.internal:7878",
-      "apiKey": "DEIN_RADARR_API_KEY",
-      "color": "#ffbe5c"
-    }
-  ],
-  "settings": {
-    "locale": "de-DE",
-    "refreshIntervalMinutes": 5,
-    "defaultView": "month",
-    "defaultDisplay": "names",
-    "colors": {
-      "sonarr": "#55d6be",
-      "radarr": "#ffbe5c"
-    }
-  }
-}
-```
-
-Die API-Keys befinden sich in Sonarr und Radarr jeweils unter
-`Einstellungen > Allgemein > Sicherheit`.
-
-Nach dem Speichern die Calendarr-Seite aktualisieren. Ein Neustart des
-Containers ist für geänderte API-Keys nicht erforderlich.
-
-> Der Konfigurationsdialog verändert Serverzugangsdaten. Calendarr sollte daher
-> nur im vertrauenswürdigen Heimnetz oder hinter einer vorgeschalteten
-> Authentifizierung erreichbar sein.
-
-### 6. Verbindung zu Sonarr und Radarr
-
-Ein zusätzliches Docker-Netzwerk ist nicht erforderlich. Calendarr erreicht
-Sonarr und Radarr über den Docker-Host:
-
-```json
-"url": "http://host.docker.internal:8989"
-```
-
-Die Ports von Sonarr und Radarr müssen dafür auf dem Docker-Host veröffentlicht
-sein, normalerweise `8989` und `7878`. Alternativ kann in `config.json` eine
-direkt erreichbare IP-Adresse oder Domain eingetragen werden.
-
-Status prüfen:
-
-```sh
-docker compose ps
-docker compose logs -f calendarr
-```
-
-Calendarr ist anschließend standardmäßig unter
-`http://<docker-host>:3000` erreichbar.
-
-## Konfiguration
-
-Unterstützte Werte:
-
-| Einstellung | Werte |
-| --- | --- |
-| `defaultView` | `day`, `three`, `week`, `month` |
-| `defaultDisplay` | `names`, `dots` |
-| `refreshIntervalMinutes` | Positive Zahl |
-| `locale` | Zum Beispiel `de-DE` oder `en-US` |
-| `colors` | Farben im Format `#RRGGBB` |
-| Instanz-`color` | Individuelle Punktfarbe im Format `#RRGGBB` |
-
-Sonarr oder Radarr darf leer bleiben:
-
-```json
-"radarrInstances": []
-```
-
-Geänderte Instanzen oder API-Keys werden bei der nächsten Aktualisierung des
-Kalenders übernommen. Änderungen an den Oberflächen-Einstellungen greifen nach
-dem Neuladen der Seite. API-Keys werden nicht an den Browser ausgeliefert.
-Individuell im Browser gewählte Ansicht und Farben werden weiterhin lokal
-gespeichert und überschreiben dort die Standardwerte.
-
-## Updates
-
-Compose verwendet das Multi-Arch-Image
-`ghcr.io/maomao63/calendarr:latest` für `linux/amd64` und `linux/arm64`.
-
-Eine neue Version wird folgendermaßen geladen:
-
-```sh
-docker compose pull
-docker compose up -d
-```
-
-Bei jedem Push auf den Branch `main` erstellt GitHub Actions automatisch ein
-neues Image mit dem Tag `latest`.
-
-## Homarr
-
-Als Iframe-URL:
-
-```text
-http://<docker-host>:3000/?embed=1
-```
-
-Ansicht und Darstellungsmodus können optional vorgegeben werden:
-
-```text
-http://<docker-host>:3000/?embed=1&view=week&display=dots
-```
-
-## Lokale Entwicklung
-
-```sh
-npm ci
+# Build the frontend & backend
 npm run build
-CONFIG_FILE=./config/config.json npm start
+
+# Start the server (default port 3000)
+npm start
 ```
 
-Healthcheck:
+Your configuration will be saved to `config/config.json` by default when running locally.
 
-```text
-GET /api/health
-```
+---
 
-## Grundlage
+## 📝 License
 
-Dieses Projekt basiert auf
-[Nino1500/calendarr](https://github.com/Nino1500/calendarr).
+This project is licensed under the MIT License.
