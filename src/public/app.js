@@ -47,11 +47,6 @@ const state = {
   events: [],
   view: loadSavedView(),
   displayMode: loadDisplayMode(),
-  colors: {
-    sonarr: loadColor("calendarr-sonarr-color", defaultColors.sonarr),
-    radarr: loadColor("calendarr-radarr-color", defaultColors.radarr),
-  },
-  activeColorService: "sonarr",
   toolbarCollapsed: loadToolbarPreference(),
   lastLoadedAt: 0,
   config: {
@@ -75,19 +70,6 @@ document.body.classList.toggle("embedded", isEmbedded);
 
 dayListPreview.addEventListener("mouseenter", () => window.clearTimeout(dayListPreviewTimer));
 dayListPreview.addEventListener("mouseleave", hideDayListPreview);
-
-
-function applyColors() {
-  document.documentElement.style.setProperty("--sonarr", state.colors.sonarr);
-  document.documentElement.style.setProperty("--radarr", state.colors.radarr);
-  document.querySelector("#sonarrColorPreview").style.background = state.colors.sonarr;
-  document.querySelector("#radarrColorPreview").style.background = state.colors.radarr;
-  document.querySelector("#colorHex").value = state.colors[state.activeColorService].toUpperCase();
-  document.querySelectorAll("[data-color-service]").forEach((button) => button.classList.toggle("active", button.dataset.colorService === state.activeColorService));
-  document.querySelectorAll("[data-color]").forEach((button) => button.classList.toggle("selected", button.dataset.color.toLowerCase() === state.colors[state.activeColorService].toLowerCase()));
-}
-
-applyColors();
 
 const pad = (value) => String(value).padStart(2, "0");
 const isoDate = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -191,7 +173,7 @@ function normalizeEvents(service, items, sourceLocation) {
 }
 
 function eventColor(event) {
-  return /^#[0-9a-f]{6}$/i.test(event.color) ? event.color : state.colors[event.service];
+  return /^#[0-9a-f]{6}$/i.test(event.color) ? event.color : defaultColors[event.service];
 }
 
 async function loadEvents() {
@@ -437,11 +419,7 @@ function render() {
     const key = isoDate(date);
     const outsideMonth = state.view === "month" && date.getMonth() !== state.date.getMonth();
     const day = document.createElement("div");
-    day.className = `day${outsideMonth ? " outside empty" : ""}${key === today ? " today" : ""}${(index + 1) % columns === 0 ? " last-column" : ""}`;
-    if (outsideMonth) {
-      calendar.append(day);
-      return;
-    }
+    day.className = `day${outsideMonth ? " outside" : ""}${key === today ? " today" : ""}${(index + 1) % columns === 0 ? " last-column" : ""}`;
 
     if (state.view === "month") day.innerHTML = `<span class="day-number">${date.getDate()}</span>`;
     const dayEvents = state.events.filter((event) => event.date.slice(0, 10) === key);
@@ -516,23 +494,6 @@ function selectDisplay(displayMode) {
   state.displayMode = displayMode;
   try { window.localStorage.setItem("calendarr-display-mode", displayMode); } catch {}
   render();
-}
-
-function updateColor(service, color) {
-  if (!/^#[0-9a-f]{6}$/i.test(color)) return;
-  state.colors[service] = color;
-  try { window.localStorage.setItem(`calendarr-${service}-color`, color); } catch {}
-  applyColors();
-}
-
-function selectColorService(service) {
-  state.activeColorService = service;
-  applyColors();
-}
-
-function setColorPanel(open) {
-  document.querySelector("#colorPanel").hidden = !open;
-  document.querySelector("#colorButton").setAttribute("aria-expanded", String(open));
 }
 
 function toggleToolbar() {
@@ -617,7 +578,7 @@ function renderInstanceList(service) {
     const summaryName = card.querySelector(".instance-summary-name");
     const summaryColor = card.querySelector(".instance-summary-color");
     const apiNote = card.querySelector(".instance-api-note");
-    const color = /^#[0-9a-f]{6}$/i.test(instance.color) ? instance.color : state.colors[service];
+    const color = /^#[0-9a-f]{6}$/i.test(instance.color) ? instance.color : defaultColors[service];
 
     nameInput.value = instance.name ?? "";
     urlInput.value = instance.url ?? "";
@@ -736,18 +697,6 @@ document.querySelector("#refreshButton").addEventListener("click", loadEvents);
 document.querySelector("#settingsButton").addEventListener("click", openConfig);
 document.querySelector("#toolbarToggle").addEventListener("click", toggleToolbar);
 document.querySelector("#overviewToggle").addEventListener("click", toggleOverview);
-document.querySelector("#colorButton").addEventListener("click", () => setColorPanel(document.querySelector("#colorPanel").hidden));
-document.querySelectorAll("[data-color-service]").forEach((button) => button.addEventListener("click", () => selectColorService(button.dataset.colorService)));
-document.querySelectorAll("[data-color]").forEach((button) => button.addEventListener("click", () => updateColor(state.activeColorService, button.dataset.color)));
-document.querySelector("#colorHex").addEventListener("input", (event) => {
-  const color = event.target.value.startsWith("#") ? event.target.value : `#${event.target.value}`;
-  if (/^#[0-9a-f]{6}$/i.test(color)) updateColor(state.activeColorService, color);
-});
-document.querySelector("#resetColors").addEventListener("click", () => {
-  updateColor("sonarr", defaultColors.sonarr);
-  updateColor("radarr", defaultColors.radarr);
-});
-document.querySelector("#doneColors").addEventListener("click", () => setColorPanel(false));
 document.querySelector("#closeDetails").addEventListener("click", () => { modal.hidden = true; });
 document.querySelector("#detailBackdrop").addEventListener("click", () => { modal.hidden = true; });
 document.querySelector("#closeDayDetails").addEventListener("click", () => { dayModal.hidden = true; });
@@ -762,16 +711,12 @@ document.querySelectorAll("[data-config-service]").forEach((button) => {
 document.querySelectorAll("[data-add-instance]").forEach((button) => {
   button.addEventListener("click", () => addInstance(button.dataset.addInstance));
 });
-document.addEventListener("click", (event) => {
-  if (!event.target.closest(".display-controls")) setColorPanel(false);
-});
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     hideHoverPreview();
     modal.hidden = true;
     dayModal.hidden = true;
     configModal.hidden = true;
-    setColorPanel(false);
   }
 });
 window.addEventListener("scroll", hideHoverPreview, true);
