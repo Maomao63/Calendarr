@@ -16,46 +16,58 @@ und die Einbindung als Homarr-Iframe.
 - Docker-Images für `linux/amd64` und `linux/arm64`
 - Für Homarr und andere Iframes optimiertes Layout
 
-## Schnellstart
+## Installation mit Docker Compose
 
-Voraussetzung ist ein Docker-Netzwerk, das Calendarr mit Sonarr und Radarr
-verbindet. Der Standardname ist `media`.
-
-```sh
-docker network create media
-cp .env.example .env
-cp config/config.example.json config/config.json
-```
-
-Anschließend die URLs und API-Keys in `config/config.json` eintragen und starten:
-
-```sh
-docker compose up -d
-```
-
-Calendarr ist danach standardmäßig unter `http://localhost:3000` erreichbar.
-
-## Docker-Image
-
-Compose zieht standardmäßig immer das aktuelle Image:
+Für die Installation werden drei Dateien benötigt:
 
 ```text
-ghcr.io/maomao63/calendarr:latest
+calendarr/
+├── compose.yaml
+├── .env
+└── config/
+    └── config.json
 ```
 
-Aktualisieren:
+### 1. Verzeichnisse anlegen
 
 ```sh
-docker compose pull
-docker compose up -d
+mkdir -p calendarr/config
+cd calendarr
 ```
 
-Bei jedem Push auf den Branch `main` erstellt GitHub Actions ein neues
-Multi-Arch-Image mit dem Tag `latest`.
+### 2. `compose.yaml` erstellen
 
-## `.env`
+```yaml
+services:
+  calendarr:
+    image: ${CALENDARR_IMAGE:-ghcr.io/maomao63/calendarr:latest}
+    pull_policy: always
+    container_name: calendarr
+    restart: unless-stopped
+    ports:
+      - "${CALENDARR_PORT:-3000}:3000"
+    environment:
+      PORT: 3000
+      CONFIG_FILE: /config/config.json
+    volumes:
+      - "${CALENDARR_CONFIG_PATH:-./config}:/config:ro"
+    networks:
+      - media
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
-Die Compose-Einstellungen liegen in `.env`:
+networks:
+  media:
+    external: true
+    name: ${MEDIA_NETWORK:-media}
+```
+
+### 3. `.env` erstellen
+
+Die `.env` muss im selben Verzeichnis wie `compose.yaml` liegen:
 
 ```env
 CALENDARR_IMAGE=ghcr.io/maomao63/calendarr:latest
@@ -64,16 +76,24 @@ MEDIA_NETWORK=media
 CALENDARR_PORT=3000
 ```
 
-`CALENDARR_CONFIG_PATH` darf auch ein frei gewählter absoluter Pfad sein:
+| Variable | Beschreibung |
+| --- | --- |
+| `CALENDARR_IMAGE` | Zu verwendendes Docker-Image |
+| `CALENDARR_CONFIG_PATH` | Verzeichnis mit der `config.json` auf dem Docker-Host |
+| `MEDIA_NETWORK` | Gemeinsames Docker-Netzwerk von Calendarr, Sonarr und Radarr |
+| `CALENDARR_PORT` | Von außen erreichbarer Port |
+
+Der Speicherort der Konfiguration ist frei wählbar. Für einen absoluten Pfad
+kann beispielsweise Folgendes verwendet werden:
 
 ```env
 CALENDARR_CONFIG_PATH=/srv/docker/calendarr
 ```
 
-In diesem Verzeichnis muss die Datei `config.json` liegen. Das Verzeichnis wird
-im Container schreibgeschützt unter `/config` eingebunden.
+In diesem Verzeichnis muss direkt die Datei `config.json` liegen. Das
+Verzeichnis wird schreibgeschützt unter `/config` in den Container eingebunden.
 
-## `config.json`
+### 4. `config/config.json` erstellen
 
 ```json
 {
@@ -104,6 +124,42 @@ im Container schreibgeschützt unter `/config` eingebunden.
 }
 ```
 
+Die API-Keys befinden sich in Sonarr und Radarr jeweils unter
+`Einstellungen > Allgemein > Sicherheit`.
+
+### 5. Docker-Netzwerk vorbereiten
+
+Calendarr muss Sonarr und Radarr über ein gemeinsames Docker-Netzwerk erreichen
+können. Existiert das in `.env` eingetragene Netzwerk noch nicht, wird es einmalig
+angelegt:
+
+```sh
+docker network create media
+```
+
+Falls Sonarr und Radarr bereits ein gemeinsames Netzwerk verwenden, wird dessen
+Name stattdessen bei `MEDIA_NETWORK` eingetragen. In der `config.json` können
+dann die Container- oder Servicenamen verwendet werden, beispielsweise
+`http://sonarr:8989`.
+
+### 6. Calendarr starten
+
+```sh
+docker compose up -d
+```
+
+Status prüfen:
+
+```sh
+docker compose ps
+docker compose logs -f calendarr
+```
+
+Calendarr ist anschließend standardmäßig unter
+`http://<docker-host>:3000` erreichbar.
+
+## Konfiguration
+
 Unterstützte Werte:
 
 | Einstellung | Werte |
@@ -125,6 +181,21 @@ Kalenders übernommen. Änderungen an den Oberflächen-Einstellungen greifen nac
 dem Neuladen der Seite. API-Keys werden nicht an den Browser ausgeliefert.
 Individuell im Browser gewählte Ansicht und Farben werden weiterhin lokal
 gespeichert und überschreiben dort die Standardwerte.
+
+## Updates
+
+Compose verwendet das Multi-Arch-Image
+`ghcr.io/maomao63/calendarr:latest` für `linux/amd64` und `linux/arm64`.
+
+Eine neue Version wird folgendermaßen geladen:
+
+```sh
+docker compose pull
+docker compose up -d
+```
+
+Bei jedem Push auf den Branch `main` erstellt GitHub Actions automatisch ein
+neues Image mit dem Tag `latest`.
 
 ## Homarr
 
