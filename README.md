@@ -1,5 +1,4 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/Maomao63/Calendarr/main/docs/logo.png" alt="Calendarr Logo" width="120" />
   <h1>Calendarr</h1>
   <p>A beautiful, minimalistic, and modern calendar for your Sonarr and Radarr instances.</p>
 </div>
@@ -24,11 +23,11 @@
 
 | Month View | Dots View |
 |:---:|:---:|
-| `<img src="https://via.placeholder.com/600x350/121722/ffffff?text=Month+View" alt="Month View" width="400"/>` | `<img src="https://via.placeholder.com/600x350/121722/ffffff?text=Dots+View" alt="Dots View" width="400"/>` |
+| ![Month View](https://placehold.co/600x350/121722/ffffff.png?text=Month+View) | ![Dots View](https://placehold.co/600x350/121722/ffffff.png?text=Dots+View) |
 
 | Embedded in Dashboard | Settings Modal |
 |:---:|:---:|
-| `<img src="https://via.placeholder.com/600x350/121722/ffffff?text=Dashboard+Iframe" alt="Iframe View" width="400"/>` | `<img src="https://via.placeholder.com/600x350/121722/ffffff?text=Configuration" alt="Settings" width="400"/>` |
+| ![Iframe View](https://placehold.co/600x350/121722/ffffff.png?text=Dashboard+Iframe) | ![Settings](https://placehold.co/600x350/121722/ffffff.png?text=Configuration) |
 
 ---
 
