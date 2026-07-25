@@ -2,8 +2,136 @@ const queryParameters = new URLSearchParams(window.location.search);
 const embedParameter = queryParameters.get("embed");
 const isEmbedded = embedParameter === "1" || (embedParameter !== "0" && window.self !== window.top);
 const availableViews = ["day", "three", "week", "month"];
+const i18n = {
+  en: {
+    subtitle: "Your upcoming releases",
+    today: "Today",
+    view: "View",
+    view1Day: "1 Day",
+    view3Days: "3 Days",
+    viewWeek: "Week",
+    viewMonth: "Month",
+    language: "Language",
+    names: "Names",
+    dots: "Dots",
+    loadingReleases: "Loading releases...",
+    releases: "Releases",
+    settingsTitle: "Configuration",
+    settingsSubtitle: "Connect your Sonarr and Radarr instances.",
+    addInstance: "+ Add Instance",
+    cancel: "Cancel",
+    save: "Save",
+    servicesConnected: "{0}/2 services connected",
+    configureServices: "Configure Sonarr or Radarr in settings",
+    couldNotLoadReleases: "Could not load releases",
+    seriesEpisode: "Series Episode",
+    movie: "Movie",
+    series: "Series",
+    airsOn: "Airs on {0} at {1}",
+    releasesOn: "Releases on {0}",
+    newSonarrInstance: "New Sonarr instance",
+    newRadarrInstance: "New Radarr instance",
+    savedApiKeyKept: "Saved API key will be kept",
+    enterApiKey: "Enter API key",
+    leaveEmptyToKeepKey: "Leave empty to keep the saved API key.",
+    requiredForNewInstance: "Required for a new instance.",
+    loadingConfig: "Loading configuration...",
+    couldNotLoadConfig: "Could not load configuration",
+    savingConfig: "Saving configuration...",
+    couldNotSaveConfig: "Could not save configuration",
+    savedCalendarRefreshing: "Saved. The calendar is refreshing.",
+    removeInstance: "Remove instance",
+    name: "Name",
+    urlOrIp: "URL or IP",
+    apiKey: "API-Key",
+    dotColor: "Dot Color",
+    releaseSingular: "Release",
+    releasePlural: "Releases"
+  },
+  de: {
+    subtitle: "Deine kommenden Releases",
+    today: "Heute",
+    view: "Ansicht",
+    view1Day: "1 Tag",
+    view3Days: "3 Tage",
+    viewWeek: "Woche",
+    viewMonth: "Monat",
+    language: "Sprache",
+    names: "Namen",
+    dots: "Punkte",
+    loadingReleases: "Releases werden geladen…",
+    releases: "Releases",
+    settingsTitle: "Konfiguration",
+    settingsSubtitle: "Verbinde deine Sonarr- und Radarr-Instanzen.",
+    addInstance: "+ Instanz hinzufügen",
+    cancel: "Abbrechen",
+    save: "Speichern",
+    servicesConnected: "{0}/2 Dienste verbunden",
+    configureServices: "Sonarr oder Radarr in den Einstellungen eintragen",
+    couldNotLoadReleases: "Releases konnten nicht geladen werden",
+    seriesEpisode: "Serienepisode",
+    movie: "Film",
+    series: "Serie",
+    airsOn: "Erscheint am {0} um {1}",
+    releasesOn: "Veröffentlichung am {0}",
+    newSonarrInstance: "Neue Sonarr-Instanz",
+    newRadarrInstance: "Neue Radarr-Instanz",
+    savedApiKeyKept: "Gespeicherter API-Key bleibt erhalten",
+    enterApiKey: "API-Key eintragen",
+    leaveEmptyToKeepKey: "Leer lassen, um den gespeicherten API-Key beizubehalten.",
+    requiredForNewInstance: "Für eine neue Instanz erforderlich.",
+    loadingConfig: "Konfiguration wird geladen…",
+    couldNotLoadConfig: "Konfiguration konnte nicht geladen werden",
+    savingConfig: "Konfiguration wird gespeichert…",
+    couldNotSaveConfig: "Konfiguration konnte nicht gespeichert werden",
+    savedCalendarRefreshing: "Gespeichert. Der Kalender wird aktualisiert.",
+    removeInstance: "Instanz entfernen",
+    name: "Name",
+    urlOrIp: "URL oder IP",
+    apiKey: "API-Key",
+    dotColor: "Punktfarbe",
+    releaseSingular: "Release",
+    releasePlural: "Releases"
+  }
+};
+
+let currentLang = "en";
+try {
+  currentLang = window.localStorage.getItem("calendarr-lang") || "en";
+} catch {}
+
+function t(key, ...args) {
+  let text = i18n[currentLang]?.[key] || i18n.en[key] || key;
+  args.forEach((arg, i) => {
+    text = text.replace(`{${i}}`, String(arg));
+  });
+  return text;
+}
+
+function updateTranslations() {
+  document.documentElement.lang = currentLang;
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelector("#langSelect").value = currentLang;
+  
+  if (state.events && state.events.length) {
+      status.textContent = state.config ? `${state.events.length} ${state.events.length === 1 ? t("releaseSingular") : t("releasePlural")} · ` + t("servicesConnected", state.config.sonarrInstances.length + state.config.radarrInstances.length > 0 ? (state.config.sonarrInstances.length > 0 ? 1 : 0) + (state.config.radarrInstances.length > 0 ? 1 : 0) : 0) : t("configureServices");
+  } else if (!state.config) {
+      status.textContent = t("configureServices");
+  }
+}
+
+document.querySelector("#langSelect").addEventListener("change", (event) => {
+    currentLang = event.target.value;
+    try { window.localStorage.setItem("calendarr-lang", currentLang); } catch {}
+    locale = currentLang === "de" ? "de-DE" : "en-US";
+    updateTranslations();
+    render();
+});
+
 const appSettings = window.CALENDARR_SETTINGS ?? {};
-const locale = appSettings.locale ?? "de-DE";
+let locale = appSettings.locale ?? (currentLang === "de" ? "de-DE" : "en-US");
 
 function loadSavedView() {
   const requestedView = queryParameters.get("view");
@@ -176,7 +304,7 @@ function eventColor(event) {
 }
 
 async function loadEvents() {
-  status.textContent = "Releases werden geladen…";
+  status.textContent = t("loadingReleases");
   const range = getVisibleRange();
   try {
     const responses = await Promise.all(["sonarr", "radarr"].map(async (service) => {
@@ -189,10 +317,10 @@ async function loadEvents() {
       .flatMap((result) => normalizeEvents(result.service, result.items, result.sourceLocation))
       .sort((first, second) => new Date(first.date).getTime() - new Date(second.date).getTime());
     const configured = responses.filter((result) => result.configured).length;
-    status.textContent = configured ? `${state.events.length} Releases · ${configured}/2 Dienste verbunden` : "Sonarr oder Radarr in config.json eintragen";
+    status.textContent = configured ? `${state.events.length} ${state.events.length === 1 ? t("releaseSingular") : t("releasePlural")} · ` + t("servicesConnected", configured) : t("configureServices");
   } catch (error) {
     state.events = [];
-    status.textContent = error.message ?? "Releases konnten nicht geladen werden";
+    status.textContent = error.message ?? t("couldNotLoadReleases");
   }
   state.lastLoadedAt = Date.now();
   render();
@@ -264,13 +392,13 @@ function showDayListPreview(date, events, clientX, clientY) {
 function showHoverPreview(event, anchor, clientX, clientY) {
   if (!anchor.isConnected) return;
   const previewType = document.querySelector("#hoverPreviewType");
-  previewType.textContent = event.service === "sonarr" ? "Serienepisode" : "Film";
+  previewType.textContent = event.service === "sonarr" ? t("seriesEpisode") : t("movie");
   previewType.className = `pill ${event.service}`;
   document.querySelector("#hoverPreviewTitle").textContent = event.title;
   document.querySelector("#hoverPreviewSubtitle").textContent = event.subtitle;
   document.querySelector("#hoverPreviewRelease").textContent = event.releaseTime
-    ? `Erscheint am ${event.releaseDate} um ${event.releaseTime}`
-    : `Veröffentlichung am ${event.releaseDate}`;
+    ? t("airsOn", event.releaseDate, event.releaseTime)
+    : t("releasesOn", event.releaseDate);
   document.querySelector("#hoverPreviewOverview").textContent = event.overview;
   document.querySelector("#hoverPreviewPoster").style.backgroundImage = event.poster
     ? `linear-gradient(0deg,rgba(10,14,22,.3),transparent),url("${event.poster}")`
@@ -335,7 +463,7 @@ function openDayDetails(date, events) {
     month: "long",
     day: "numeric",
   });
-  document.querySelector("#dayDetailCount").textContent = `${events.length} ${events.length === 1 ? "Release" : "Releases"}`;
+  document.querySelector("#dayDetailCount").textContent = `${events.length} ${events.length === 1 ? t("releaseSingular") : t("releasePlural")}`;
   const releaseList = document.querySelector("#dayReleaseList");
   releaseList.replaceChildren();
 
@@ -345,7 +473,7 @@ function openDayDetails(date, events) {
     item.innerHTML = `<i class="release-dot"></i><span class="day-release-copy"><strong></strong><small></small></span><span class="day-release-service"></span>`;
     item.querySelector("strong").textContent = event.title;
     item.querySelector("small").textContent = event.subtitle;
-    item.querySelector(".day-release-service").textContent = event.service === "sonarr" ? "Serie" : "Film";
+    item.querySelector(".day-release-service").textContent = event.service === "sonarr" ? t("series") : t("movie");
     const releaseDot = item.querySelector(".release-dot");
     releaseDot.style.background = eventColor(event);
     releaseDot.style.boxShadow = `0 0 8px ${eventColor(event)}88`;
@@ -519,20 +647,20 @@ function renderInstanceList(service) {
       </summary>
       <div class="instance-fields">
         <label class="instance-field">
-          <span>Name</span>
+          <span>${t('name')}</span>
           <input data-instance-field="name" type="text" maxlength="80" required placeholder="${service === "sonarr" ? "Sonarr 4K" : "Radarr 4K"}" />
         </label>
         <label class="instance-field">
-          <span>URL oder IP</span>
+          <span>${t('urlOrIp')}</span>
           <input data-instance-field="url" type="text" inputmode="url" required placeholder="IP:Port oder http://host:${service === "sonarr" ? "8989" : "7878"}" />
         </label>
         <label class="instance-field wide">
-          <span>API-Key</span>
+          <span>${t('apiKey')}</span>
           <input data-instance-field="apiKey" type="password" autocomplete="new-password" />
           <small class="instance-api-note"></small>
         </label>
         <label class="instance-field">
-          <span>Punktfarbe</span>
+          <span>${t('dotColor')}</span>
           <span class="instance-color-row">
             <input data-instance-color-picker type="color" />
             <input data-instance-field="color" type="text" maxlength="7" pattern="#[0-9A-Fa-f]{6}" required />
@@ -561,13 +689,13 @@ function renderInstanceList(service) {
       : "Für eine neue Instanz erforderlich.";
     colorInput.value = color.toUpperCase();
     colorPicker.value = color;
-    summaryName.textContent = instance.name || `Neue ${service === "sonarr" ? "Sonarr" : "Radarr"}-Instanz`;
+    summaryName.textContent = instance.name || (service === "sonarr" ? t("newSonarrInstance") : t("newRadarrInstance"));
     summaryColor.style.background = color;
     summaryColor.style.color = color;
 
     nameInput.addEventListener("input", () => {
       instance.name = nameInput.value;
-      summaryName.textContent = nameInput.value || `Neue ${service === "sonarr" ? "Sonarr" : "Radarr"}-Instanz`;
+      summaryName.textContent = nameInput.value || (service === "sonarr" ? t("newSonarrInstance") : t("newRadarrInstance"));
     });
     urlInput.addEventListener("input", () => { instance.url = urlInput.value; });
     apiKeyInput.addEventListener("input", () => { instance.apiKey = apiKeyInput.value; });
@@ -607,11 +735,11 @@ function addInstance(service) {
 
 async function openConfig() {
   configModal.hidden = false;
-  setConfigStatus("Konfiguration wird geladen…");
+  setConfigStatus(t("loadingConfig"));
   try {
     const response = await fetch("/api/config", { cache: "no-store" });
     const body = await response.json();
-    if (!response.ok) throw new Error(body.error ?? "Konfiguration konnte nicht geladen werden");
+    if (!response.ok) throw new Error(body.error ?? t("couldNotLoadConfig"));
     state.config.sonarrInstances = body.sonarrInstances ?? [];
     state.config.radarrInstances = body.radarrInstances ?? [];
     renderInstanceList("sonarr");
@@ -619,7 +747,7 @@ async function openConfig() {
     selectConfigTab("sonarr");
     setConfigStatus("");
   } catch (error) {
-    setConfigStatus(error.message ?? "Konfiguration konnte nicht geladen werden", "error");
+    setConfigStatus(error.message ?? t("couldNotLoadConfig"), "error");
   }
 }
 
@@ -633,7 +761,7 @@ async function saveConfig(event) {
   if (!event.currentTarget.reportValidity()) return;
   const saveButton = document.querySelector("#saveConfig");
   saveButton.disabled = true;
-  setConfigStatus("Konfiguration wird gespeichert…");
+  setConfigStatus(t("savingConfig"));
 
   try {
     const response = await fetch("/api/config", {
@@ -645,15 +773,15 @@ async function saveConfig(event) {
       }),
     });
     const body = await response.json();
-    if (!response.ok) throw new Error(body.error ?? "Konfiguration konnte nicht gespeichert werden");
+    if (!response.ok) throw new Error(body.error ?? t("couldNotSaveConfig"));
     state.config.sonarrInstances = body.config.sonarrInstances;
     state.config.radarrInstances = body.config.radarrInstances;
     renderInstanceList("sonarr");
     renderInstanceList("radarr");
-    setConfigStatus("Gespeichert. Der Kalender wird aktualisiert.", "success");
+    setConfigStatus(t("savedCalendarRefreshing"), "success");
     await loadEvents();
   } catch (error) {
-    setConfigStatus(error.message ?? "Konfiguration konnte nicht gespeichert werden", "error");
+    setConfigStatus(error.message ?? t("couldNotSaveConfig"), "error");
   } finally {
     saveButton.disabled = false;
   }
@@ -698,3 +826,4 @@ document.addEventListener("visibilitychange", () => {
   if (!document.hidden && Date.now() - state.lastLoadedAt > 60 * 1000) void loadEvents();
 });
 void loadEvents();
+updateTranslations();

@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="de">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark" />
     <title>Calendarr</title>
-    <link rel="stylesheet" href="/styles.css?v=calendarr-13" />
+    <link rel="stylesheet" href="/styles.css?v=calendarr-14" />
   </head>
   <body>
     <div class="ambient ambient-one"></div>
@@ -14,23 +14,30 @@
       <header>
         <div class="brand">
           <div class="brand-mark">C</div>
-          <div><h1>Calendarr</h1><p>Deine kommenden Releases</p></div>
+          <div><h1>Calendarr</h1><p data-i18n="subtitle">Your upcoming releases</p></div>
         </div>
         <div class="controls">
-          <button id="todayButton">Heute</button>
+          <button id="todayButton" data-i18n="today">Today</button>
           <label class="view-select">
-            <span>Ansicht</span>
-            <select id="viewSelect" aria-label="Kalenderansicht">
-              <option value="day">1 Tag</option>
-              <option value="three">3 Tage</option>
-              <option value="week">Woche</option>
-              <option value="month">Monat</option>
+            <span data-i18n="view">View</span>
+            <select id="viewSelect" aria-label="Calendar view">
+              <option value="day" data-i18n="view1Day">1 Day</option>
+              <option value="three" data-i18n="view3Days">3 Days</option>
+              <option value="week" data-i18n="viewWeek">Week</option>
+              <option value="month" data-i18n="viewMonth">Month</option>
+            </select>
+          </label>
+          <label class="view-select">
+            <span data-i18n="language">Language</span>
+            <select id="langSelect" aria-label="Language">
+              <option value="en">English</option>
+              <option value="de">Deutsch</option>
             </select>
           </label>
           <div class="display-controls">
-            <div class="display-switcher" aria-label="Darstellung der Releases">
-              <button data-display="names" aria-pressed="false">Namen</button>
-              <button data-display="dots" aria-pressed="false">Punkte</button>
+            <div class="display-switcher" aria-label="Display mode">
+              <button data-display="names" aria-pressed="false" data-i18n="names">Names</button>
+              <button data-display="dots" aria-pressed="false" data-i18n="dots">Dots</button>
             </div>
           </div>
           <div class="month-controls">
@@ -45,7 +52,7 @@
       </header>
 
       <section class="legend">
-        <span id="status" class="status">Releases werden geladen…</span>
+        <span id="status" class="status" data-i18n="loadingReleases">Loading releases...</span>
       </section>
 
       <section class="calendar-shell">
@@ -78,7 +85,7 @@
       <article class="day-detail-card">
         <button id="closeDayDetails" class="close" aria-label="Schließen">×</button>
         <header class="day-detail-header">
-          <div><span class="eyebrow">Releases</span><h2 id="dayDetailTitle"></h2></div>
+          <div><span class="eyebrow" data-i18n="releases">Releases</span><h2 id="dayDetailTitle"></h2></div>
           <span id="dayDetailCount" class="day-count"></span>
         </header>
         <div id="dayReleaseList" class="day-release-list"></div>
@@ -86,44 +93,37 @@
     </div>
 
     <div id="configModal" class="modal" hidden>
-      <button id="configBackdrop" class="backdrop" type="button" aria-label="Konfiguration schließen"></button>
+      <button id="configBackdrop" class="backdrop" type="button" aria-label="Close configuration"></button>
       <article class="config-card">
         <header class="config-header">
           <div>
-            <span class="eyebrow">Calendarr</span>
-            <h2>Instanzen konfigurieren</h2>
-            <p>API-Keys werden sicher in deiner config.json gespeichert.</p>
+            <h2 data-i18n="settingsTitle">Configuration</h2>
+            <p data-i18n="settingsSubtitle">Connect your Sonarr and Radarr instances.</p>
           </div>
-          <button id="closeConfig" class="close" type="button" aria-label="Schließen">×</button>
+          <button id="closeConfig" class="close" aria-label="Close">×</button>
         </header>
-
-        <div class="config-tabs" role="tablist" aria-label="Dienst auswählen">
-          <button class="config-tab active" type="button" data-config-service="sonarr" role="tab" aria-selected="true">
-            Sonarr
-          </button>
-          <button class="config-tab" type="button" data-config-service="radarr" role="tab" aria-selected="false">
-            Radarr
-          </button>
+        <div class="config-tabs">
+          <button class="config-tab active" data-config-service="sonarr" aria-selected="true">Sonarr</button>
+          <button class="config-tab" data-config-service="radarr" aria-selected="false">Radarr</button>
         </div>
-
         <form id="configForm">
-          <section class="config-panel active" data-config-panel="sonarr" role="tabpanel">
+          <div class="config-panel active" data-config-panel="sonarr">
             <div id="sonarrInstanceList" class="instance-list"></div>
-            <button class="add-instance" type="button" data-add-instance="sonarr">+ Sonarr-Instanz hinzufügen</button>
-          </section>
-          <section class="config-panel" data-config-panel="radarr" role="tabpanel" hidden>
+            <button class="add-instance" type="button" data-add-instance="sonarr" data-i18n="addInstance">+ Add Instance</button>
+          </div>
+          <div class="config-panel" data-config-panel="radarr" hidden>
             <div id="radarrInstanceList" class="instance-list"></div>
-            <button class="add-instance" type="button" data-add-instance="radarr">+ Radarr-Instanz hinzufügen</button>
-          </section>
-          <p id="configStatus" class="config-status" aria-live="polite"></p>
+            <button class="add-instance" type="button" data-add-instance="radarr" data-i18n="addInstance">+ Add Instance</button>
+          </div>
+          <div id="configStatus" class="config-status"></div>
           <footer class="config-actions">
-            <button id="cancelConfig" type="button">Abbrechen</button>
-            <button id="saveConfig" class="save-config" type="submit">In config.json speichern</button>
+            <button id="cancelConfig" type="button" data-i18n="cancel">Cancel</button>
+            <button id="saveConfig" type="submit" class="save-config" data-i18n="save">Save</button>
           </footer>
         </form>
       </article>
     </div>
     <script src="/api/settings.js"></script>
-    <script src="/app.js?v=calendarr-14" defer></script>
+    <script src="/app.js?v=calendarr-15" defer></script>
   </body>
 </html>
