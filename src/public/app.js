@@ -67,7 +67,9 @@ const modal = document.querySelector("#details");
 const dayModal = document.querySelector("#dayDetails");
 const configModal = document.querySelector("#configModal");
 const hoverPreview = document.querySelector("#hoverPreview");
+const dayListPreview = document.querySelector("#dayListPreview");
 let hoverPreviewTimer;
+let dayListPreviewTimer;
 
 document.body.classList.toggle("embedded", isEmbedded);
 
@@ -215,6 +217,56 @@ function hideHoverPreview() {
   window.clearTimeout(hoverPreviewTimer);
   hoverPreview.hidden = true;
   hoverPreview.setAttribute("aria-hidden", "true");
+}
+
+function hideDayListPreview() {
+  window.clearTimeout(dayListPreviewTimer);
+  dayListPreview.hidden = true;
+  dayListPreview.setAttribute("aria-hidden", "false");
+}
+
+function showDayListPreview(date, events, clientX, clientY) {
+  const header = document.querySelector("#dayListPreviewDate");
+  const count = document.querySelector("#dayListPreviewCount");
+  const items = document.querySelector("#dayListPreviewItems");
+  header.textContent = date.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
+  count.textContent = `${events.length} Release${events.length !== 1 ? "s" : ""}`;
+  items.replaceChildren();
+  events.forEach((event) => {
+    const item = document.createElement("div");
+    item.className = "day-list-preview-item";
+    const bar = document.createElement("i");
+    bar.className = "day-list-preview-bar";
+    bar.style.background = eventColor(event);
+    const poster = document.createElement("div");
+    poster.className = "day-list-preview-poster";
+    if (event.poster) poster.style.backgroundImage = `url('${event.poster.replace(/'/g, "%27")}') `;
+    const copy = document.createElement("div");
+    copy.className = "day-list-preview-copy";
+    const title = document.createElement("span");
+    title.className = "day-list-preview-title";
+    title.textContent = event.title;
+    const sub = document.createElement("span");
+    sub.className = "day-list-preview-sub";
+    sub.textContent = event.subtitle;
+    copy.append(title, sub);
+    item.append(bar, poster, copy);
+    items.append(item);
+  });
+  dayListPreview.hidden = false;
+  dayListPreview.setAttribute("aria-hidden", "false");
+  window.requestAnimationFrame(() => {
+    if (dayListPreview.hidden) return;
+    const rect = dayListPreview.getBoundingClientRect();
+    const gap = 15;
+    let left = clientX + gap;
+    if (left + rect.width > window.innerWidth - 8) left = clientX - rect.width - gap;
+    left = Math.max(8, left);
+    let top = clientY - (rect.height / 2);
+    top = Math.max(8, Math.min(top, window.innerHeight - rect.height - 8));
+    dayListPreview.style.left = `${left}px`;
+    dayListPreview.style.top = `${top}px`;
+  });
 }
 
 function showHoverPreview(event, anchor, clientX, clientY) {
@@ -394,10 +446,17 @@ function render() {
         dot.className = `release-dot ${event.service}`;
         dot.style.background = eventColor(event);
         dot.style.boxShadow = `0 0 8px ${eventColor(event)}88`;
-        attachHoverPreview(dot, event);
         dots.append(dot);
       });
       day.append(dots);
+      let lastX = 0, lastY = 0;
+      day.addEventListener("mousemove", (e) => { lastX = e.clientX; lastY = e.clientY; });
+      day.addEventListener("mouseenter", (e) => {
+        lastX = e.clientX; lastY = e.clientY;
+        window.clearTimeout(dayListPreviewTimer);
+        dayListPreviewTimer = window.setTimeout(() => showDayListPreview(date, dayEvents, lastX, lastY), 200);
+      });
+      day.addEventListener("mouseleave", hideDayListPreview);
       day.addEventListener("click", () => openDayDetails(date, dayEvents));
       day.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {

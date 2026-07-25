@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark" />
     <title>Calendarr</title>
-    <link rel="stylesheet" href="/styles.css?v=calendarr-6" />
+    <link rel="stylesheet" href="/styles.css?v=calendarr-7" />
   </head>
   <body>
     <div class="ambient ambient-one"></div>
@@ -90,6 +90,15 @@
       </div>
     </aside>
 
+    <aside id="dayListPreview" class="day-list-preview" aria-hidden="true" hidden>
+      <div id="dayListPreviewHeader" class="day-list-preview-header">
+        <span id="dayListPreviewDate"></span>
+        <span id="dayListPreviewCount" class="pill"></span>
+      </div>
+      <div id="dayListPreviewItems" class="day-list-preview-items"></div>
+    </aside>
+
+
     <div id="details" class="modal" hidden>
       <button id="detailBackdrop" class="backdrop" aria-label="Details schließen"></button>
       <article class="detail-card">
@@ -158,6 +167,6 @@
       </article>
     </div>
     <script src="/api/settings.js"></script>
-    <script src="/app.js?v=calendarr-8" defer></script>
+    <script src="/app.js?v=calendarr-9" defer></script>
   </body>
 </html>
