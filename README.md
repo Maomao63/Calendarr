@@ -11,6 +11,8 @@ und die Einbindung als Homarr-Iframe.
 - Detailansicht mit Poster, Beschreibung und direktem Sonarr-/Radarr-Link
 - Kompakte Punkte- oder Namensdarstellung
 - Anpassbare Farben und automatische Aktualisierung
+- Zahnrad-Dialog zum Verwalten beliebig vieler Sonarr-/Radarr-Instanzen
+- Eigene Kalenderfarbe pro Instanz
 - Deutsche Oberfläche und konfigurierbares Datumsformat
 - Persistente Konfiguration mit API-Keys außerhalb des Images
 - Docker-Images für `linux/amd64` und `linux/arm64`
@@ -110,7 +112,25 @@ Die automatisch erzeugte Datei liegt dann unter:
 /mnt/user/appdata/calendarr/config.json
 ```
 
-### 5. `config.json` bearbeiten
+### 5. Instanzen im Kalender einrichten
+
+Im Kalender oben rechts das Zahnrad **⚙** öffnen. Dort stehen getrennte Tabs
+für Sonarr und Radarr zur Verfügung. Mit **+ Instanz hinzufügen** können
+beliebig viele Instanzen angelegt werden.
+
+Pro Instanz werden folgende Angaben gespeichert:
+
+- frei wählbarer Name
+- URL oder IP inklusive Port
+- API-Key
+- individuelle Punktfarbe im Kalender
+
+Beim Speichern wird die gemountete `config.json` automatisch aktualisiert.
+Bereits gespeicherte API-Keys werden im Browser nicht angezeigt. Bleibt das
+API-Key-Feld einer vorhandenen Instanz leer, wird der gespeicherte Key
+beibehalten.
+
+Die Datei kann alternativ weiterhin manuell bearbeitet werden:
 
 ```json
 {
@@ -118,14 +138,16 @@ Die automatisch erzeugte Datei liegt dann unter:
     {
       "name": "Sonarr",
       "url": "http://host.docker.internal:8989",
-      "apiKey": "DEIN_SONARR_API_KEY"
+      "apiKey": "DEIN_SONARR_API_KEY",
+      "color": "#55d6be"
     }
   ],
   "radarrInstances": [
     {
       "name": "Radarr",
       "url": "http://host.docker.internal:7878",
-      "apiKey": "DEIN_RADARR_API_KEY"
+      "apiKey": "DEIN_RADARR_API_KEY",
+      "color": "#ffbe5c"
     }
   ],
   "settings": {
@@ -146,6 +168,10 @@ Die API-Keys befinden sich in Sonarr und Radarr jeweils unter
 
 Nach dem Speichern die Calendarr-Seite aktualisieren. Ein Neustart des
 Containers ist für geänderte API-Keys nicht erforderlich.
+
+> Der Konfigurationsdialog verändert Serverzugangsdaten. Calendarr sollte daher
+> nur im vertrauenswürdigen Heimnetz oder hinter einer vorgeschalteten
+> Authentifizierung erreichbar sein.
 
 ### 6. Verbindung zu Sonarr und Radarr
 
@@ -181,6 +207,7 @@ Unterstützte Werte:
 | `refreshIntervalMinutes` | Positive Zahl |
 | `locale` | Zum Beispiel `de-DE` oder `en-US` |
 | `colors` | Farben im Format `#RRGGBB` |
+| Instanz-`color` | Individuelle Punktfarbe im Format `#RRGGBB` |
 
 Sonarr oder Radarr darf leer bleiben:
 

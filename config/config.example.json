@@ -3,14 +3,16 @@
     {
       "name": "Sonarr",
       "url": "http://host.docker.internal:8989",
-      "apiKey": "SONARR_API_KEY_HIER_EINTRAGEN"
+      "apiKey": "SONARR_API_KEY_HIER_EINTRAGEN",
+      "color": "#55d6be"
     }
   ],
   "radarrInstances": [
     {
       "name": "Radarr",
       "url": "http://host.docker.internal:7878",
-      "apiKey": "RADARR_API_KEY_HIER_EINTRAGEN"
+      "apiKey": "RADARR_API_KEY_HIER_EINTRAGEN",
+      "color": "#ffbe5c"
     }
   ],
   "settings": {

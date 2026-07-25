@@ -5,6 +5,7 @@ config_file="${CONFIG_FILE:-/config/config.json}"
 config_directory=$(dirname "$config_file")
 
 mkdir -p "$config_directory"
+chown node:node "$config_directory"
 
 if [ ! -f "$config_file" ]; then
   cp /defaults/config.json "$config_file"

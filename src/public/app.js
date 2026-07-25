@@ -54,6 +54,10 @@ const state = {
   activeColorService: "sonarr",
   toolbarCollapsed: loadToolbarPreference(),
   lastLoadedAt: 0,
+  config: {
+    sonarrInstances: [],
+    radarrInstances: [],
+  },
 };
 const calendar = document.querySelector("#calendar");
 const weekdays = document.querySelector("#weekdays");
@@ -61,6 +65,7 @@ const periodTitle = document.querySelector("#monthTitle");
 const status = document.querySelector("#status");
 const modal = document.querySelector("#details");
 const dayModal = document.querySelector("#dayDetails");
+const configModal = document.querySelector("#configModal");
 
 document.body.classList.toggle("embedded", isEmbedded);
 
@@ -147,6 +152,7 @@ function createBrowserServiceUrl(location) {
 function normalizeEvents(service, items, sourceLocation) {
   return items.map((item) => {
     const isEpisode = service === "sonarr";
+    const instance = item._calendarr ?? {};
     const title = isEpisode ? item.series?.title ?? item.title : item.title;
     const date = isEpisode ? item.airDateUtc ?? item.airDate : item.digitalRelease ?? item.physicalRelease ?? item.inCinemas;
     const season = isEpisode ? `S${pad(item.seasonNumber)}E${pad(item.episodeNumber)}` : "Film";
@@ -155,12 +161,28 @@ function normalizeEvents(service, items, sourceLocation) {
     const releaseDate = Number.isNaN(release.getTime()) ? "Veröffentlichungsdatum unbekannt" : release.toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" });
     const hasExplicitMovieTime = !isEpisode && /T\d{2}:\d{2}/.test(date) && (release.getUTCHours() !== 0 || release.getUTCMinutes() !== 0);
     const releaseTime = (isEpisode || hasExplicitMovieTime) && !Number.isNaN(release.getTime()) ? release.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }) : undefined;
-    const subtitle = isEpisode ? `${releaseTime ? `${releaseTime} · ` : ""}${season} · ${item.title}` : item.year ?? "Demnächst";
+    const releaseSubtitle = isEpisode ? `${releaseTime ? `${releaseTime} · ` : ""}${season} · ${item.title}` : item.year ?? "Demnächst";
+    const subtitle = instance.name ? `${releaseSubtitle} · ${instance.name}` : releaseSubtitle;
     const sourceSlug = isEpisode ? item.series?.titleSlug : item.titleSlug;
-    const sourceBaseUrl = createBrowserServiceUrl(sourceLocation);
+    const sourceBaseUrl = createBrowserServiceUrl(instance.sourceLocation ?? sourceLocation);
     const sourceUrl = sourceSlug ? createSourceUrl(sourceBaseUrl, `${isEpisode ? "series" : "movie"}/${sourceSlug}`) : undefined;
-    return { service, title, date, subtitle, releaseDate, releaseTime, sourceUrl, overview: item.overview ?? item.series?.overview ?? "Keine Beschreibung verfügbar.", poster: remotePoster };
+    return {
+      service,
+      title,
+      date,
+      subtitle,
+      releaseDate,
+      releaseTime,
+      sourceUrl,
+      overview: item.overview ?? item.series?.overview ?? "Keine Beschreibung verfügbar.",
+      poster: remotePoster,
+      color: instance.color,
+    };
   }).filter((event) => event.date && event.title);
+}
+
+function eventColor(event) {
+  return /^#[0-9a-f]{6}$/i.test(event.color) ? event.color : state.colors[event.service];
 }
 
 async function loadEvents() {
@@ -230,6 +252,9 @@ function openDayDetails(date, events) {
     item.querySelector("strong").textContent = event.title;
     item.querySelector("small").textContent = event.subtitle;
     item.querySelector(".day-release-service").textContent = event.service === "sonarr" ? "Serie" : "Film";
+    const releaseDot = item.querySelector(".release-dot");
+    releaseDot.style.background = eventColor(event);
+    releaseDot.style.boxShadow = `0 0 8px ${eventColor(event)}88`;
     item.addEventListener("click", () => {
       dayModal.hidden = true;
       openDetails(event);
@@ -297,6 +322,8 @@ function render() {
         const dot = document.createElement("i");
         dot.className = `release-dot ${event.service}`;
         dot.title = `${event.title} — ${event.subtitle}`;
+        dot.style.background = eventColor(event);
+        dot.style.boxShadow = `0 0 8px ${eventColor(event)}88`;
         dots.append(dot);
       });
       day.append(dots);
@@ -319,6 +346,7 @@ function render() {
       button.innerHTML = `<i class="event-bar"></i><span class="event-copy"><span class="event-title"></span><span class="event-subtitle"></span></span>`;
       button.querySelector(".event-title").textContent = event.title;
       button.querySelector(".event-subtitle").textContent = event.subtitle;
+      button.querySelector(".event-bar").style.background = eventColor(event);
       button.addEventListener("click", () => openDetails(event));
       eventList.append(button);
     });
@@ -375,12 +403,192 @@ function toggleOverview() {
   overviewToggle.textContent = collapsed ? "Mehr anzeigen" : "Weniger anzeigen";
 }
 
+function configListKey(service) {
+  return `${service}Instances`;
+}
+
+function setConfigStatus(message, type = "") {
+  const configStatus = document.querySelector("#configStatus");
+  configStatus.textContent = message;
+  configStatus.className = `config-status${type ? ` ${type}` : ""}`;
+}
+
+function selectConfigTab(service) {
+  document.querySelectorAll("[data-config-service]").forEach((button) => {
+    const active = button.dataset.configService === service;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+  document.querySelectorAll("[data-config-panel]").forEach((panel) => {
+    const active = panel.dataset.configPanel === service;
+    panel.classList.toggle("active", active);
+    panel.hidden = !active;
+  });
+}
+
+function renderInstanceList(service) {
+  const list = document.querySelector(`#${service}InstanceList`);
+  const instances = state.config[configListKey(service)];
+  list.replaceChildren();
+
+  instances.forEach((instance, index) => {
+    const card = document.createElement("details");
+    card.className = "instance-card";
+    card.open = true;
+    card.innerHTML = `
+      <summary>
+        <i class="instance-summary-color"></i>
+        <span class="instance-summary-name"></span>
+      </summary>
+      <div class="instance-fields">
+        <label class="instance-field">
+          <span>Name</span>
+          <input data-instance-field="name" type="text" maxlength="80" required placeholder="${service === "sonarr" ? "Sonarr 4K" : "Radarr 4K"}" />
+        </label>
+        <label class="instance-field">
+          <span>URL oder IP</span>
+          <input data-instance-field="url" type="text" inputmode="url" required placeholder="IP:Port oder http://host:${service === "sonarr" ? "8989" : "7878"}" />
+        </label>
+        <label class="instance-field wide">
+          <span>API-Key</span>
+          <input data-instance-field="apiKey" type="password" autocomplete="new-password" />
+          <small class="instance-api-note"></small>
+        </label>
+        <label class="instance-field">
+          <span>Punktfarbe</span>
+          <span class="instance-color-row">
+            <input data-instance-color-picker type="color" />
+            <input data-instance-field="color" type="text" maxlength="7" pattern="#[0-9A-Fa-f]{6}" required />
+          </span>
+        </label>
+        <button class="remove-instance" type="button">Instanz entfernen</button>
+      </div>`;
+
+    const nameInput = card.querySelector('[data-instance-field="name"]');
+    const urlInput = card.querySelector('[data-instance-field="url"]');
+    const apiKeyInput = card.querySelector('[data-instance-field="apiKey"]');
+    const colorInput = card.querySelector('[data-instance-field="color"]');
+    const colorPicker = card.querySelector("[data-instance-color-picker]");
+    const summaryName = card.querySelector(".instance-summary-name");
+    const summaryColor = card.querySelector(".instance-summary-color");
+    const apiNote = card.querySelector(".instance-api-note");
+    const color = /^#[0-9a-f]{6}$/i.test(instance.color) ? instance.color : state.colors[service];
+
+    nameInput.value = instance.name ?? "";
+    urlInput.value = instance.url ?? "";
+    apiKeyInput.value = "";
+    apiKeyInput.required = !instance.hasApiKey;
+    apiKeyInput.placeholder = instance.hasApiKey ? "Gespeicherter API-Key bleibt erhalten" : "API-Key eintragen";
+    apiNote.textContent = instance.hasApiKey
+      ? "Leer lassen, um den gespeicherten API-Key beizubehalten."
+      : "Für eine neue Instanz erforderlich.";
+    colorInput.value = color.toUpperCase();
+    colorPicker.value = color;
+    summaryName.textContent = instance.name || `Neue ${service === "sonarr" ? "Sonarr" : "Radarr"}-Instanz`;
+    summaryColor.style.background = color;
+    summaryColor.style.color = color;
+
+    nameInput.addEventListener("input", () => {
+      instance.name = nameInput.value;
+      summaryName.textContent = nameInput.value || `Neue ${service === "sonarr" ? "Sonarr" : "Radarr"}-Instanz`;
+    });
+    urlInput.addEventListener("input", () => { instance.url = urlInput.value; });
+    apiKeyInput.addEventListener("input", () => { instance.apiKey = apiKeyInput.value; });
+    colorInput.addEventListener("input", () => {
+      if (!/^#[0-9a-f]{6}$/i.test(colorInput.value)) return;
+      instance.color = colorInput.value;
+      colorPicker.value = colorInput.value;
+      summaryColor.style.background = colorInput.value;
+      summaryColor.style.color = colorInput.value;
+    });
+    colorPicker.addEventListener("input", () => {
+      instance.color = colorPicker.value;
+      colorInput.value = colorPicker.value.toUpperCase();
+      summaryColor.style.background = colorPicker.value;
+      summaryColor.style.color = colorPicker.value;
+    });
+    card.querySelector(".remove-instance").addEventListener("click", () => {
+      instances.splice(index, 1);
+      renderInstanceList(service);
+    });
+
+    list.append(card);
+  });
+}
+
+function addInstance(service) {
+  state.config[configListKey(service)].push({
+    configIndex: undefined,
+    name: "",
+    url: `http://host.docker.internal:${service === "sonarr" ? "8989" : "7878"}`,
+    apiKey: "",
+    hasApiKey: false,
+    color: state.colors[service],
+  });
+  renderInstanceList(service);
+}
+
+async function openConfig() {
+  configModal.hidden = false;
+  setConfigStatus("Konfiguration wird geladen…");
+  try {
+    const response = await fetch("/api/config", { cache: "no-store" });
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error ?? "Konfiguration konnte nicht geladen werden");
+    state.config.sonarrInstances = body.sonarrInstances ?? [];
+    state.config.radarrInstances = body.radarrInstances ?? [];
+    renderInstanceList("sonarr");
+    renderInstanceList("radarr");
+    selectConfigTab("sonarr");
+    setConfigStatus("");
+  } catch (error) {
+    setConfigStatus(error.message ?? "Konfiguration konnte nicht geladen werden", "error");
+  }
+}
+
+function closeConfig() {
+  configModal.hidden = true;
+  setConfigStatus("");
+}
+
+async function saveConfig(event) {
+  event.preventDefault();
+  if (!event.currentTarget.reportValidity()) return;
+  const saveButton = document.querySelector("#saveConfig");
+  saveButton.disabled = true;
+  setConfigStatus("Konfiguration wird gespeichert…");
+
+  try {
+    const response = await fetch("/api/config", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sonarrInstances: state.config.sonarrInstances,
+        radarrInstances: state.config.radarrInstances,
+      }),
+    });
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error ?? "Konfiguration konnte nicht gespeichert werden");
+    state.config.sonarrInstances = body.config.sonarrInstances;
+    state.config.radarrInstances = body.config.radarrInstances;
+    renderInstanceList("sonarr");
+    renderInstanceList("radarr");
+    setConfigStatus("Gespeichert. Der Kalender wird aktualisiert.", "success");
+    await loadEvents();
+  } catch (error) {
+    setConfigStatus(error.message ?? "Konfiguration konnte nicht gespeichert werden", "error");
+  } finally {
+    saveButton.disabled = false;
+  }
+}
+
 document.querySelector("#viewSelect").addEventListener("change", (event) => selectView(event.target.value));
 document.querySelectorAll("[data-display]").forEach((button) => button.addEventListener("click", () => selectDisplay(button.dataset.display)));
 document.querySelector("#previousButton").addEventListener("click", () => movePeriod(-1));
 document.querySelector("#nextButton").addEventListener("click", () => movePeriod(1));
 document.querySelector("#todayButton").addEventListener("click", () => { state.date = new Date(); void loadEvents(); });
 document.querySelector("#refreshButton").addEventListener("click", loadEvents);
+document.querySelector("#settingsButton").addEventListener("click", openConfig);
 document.querySelector("#toolbarToggle").addEventListener("click", toggleToolbar);
 document.querySelector("#overviewToggle").addEventListener("click", toggleOverview);
 document.querySelector("#colorButton").addEventListener("click", () => setColorPanel(document.querySelector("#colorPanel").hidden));
@@ -399,6 +607,16 @@ document.querySelector("#closeDetails").addEventListener("click", () => { modal.
 document.querySelector("#detailBackdrop").addEventListener("click", () => { modal.hidden = true; });
 document.querySelector("#closeDayDetails").addEventListener("click", () => { dayModal.hidden = true; });
 document.querySelector("#dayBackdrop").addEventListener("click", () => { dayModal.hidden = true; });
+document.querySelector("#closeConfig").addEventListener("click", closeConfig);
+document.querySelector("#configBackdrop").addEventListener("click", closeConfig);
+document.querySelector("#cancelConfig").addEventListener("click", closeConfig);
+document.querySelector("#configForm").addEventListener("submit", saveConfig);
+document.querySelectorAll("[data-config-service]").forEach((button) => {
+  button.addEventListener("click", () => selectConfigTab(button.dataset.configService));
+});
+document.querySelectorAll("[data-add-instance]").forEach((button) => {
+  button.addEventListener("click", () => addInstance(button.dataset.addInstance));
+});
 document.addEventListener("click", (event) => {
   if (!event.target.closest(".display-controls")) setColorPanel(false);
 });
@@ -406,6 +624,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     modal.hidden = true;
     dayModal.hidden = true;
+    configModal.hidden = true;
     setColorPanel(false);
   }
 });

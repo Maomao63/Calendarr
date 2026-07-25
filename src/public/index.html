@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark" />
     <title>Calendarr</title>
-    <link rel="stylesheet" href="/styles.css?v=homarr-13" />
+    <link rel="stylesheet" href="/styles.css?v=calendarr-2" />
   </head>
   <body>
     <div class="ambient ambient-one"></div>
@@ -61,6 +61,7 @@
             <h2 id="monthTitle"></h2>
             <button id="nextButton" aria-label="Nächster Zeitraum">›</button>
           </div>
+          <button id="settingsButton" class="icon-button settings-button" aria-label="Instanzen konfigurieren" title="Instanzen konfigurieren">⚙</button>
           <button id="refreshButton" class="icon-button" aria-label="Aktualisieren">↻</button>
         </div>
         <button id="toolbarToggle" class="toolbar-toggle" aria-label="Werkzeugleiste ausblenden" aria-expanded="true">⌃</button>
@@ -106,7 +107,46 @@
         <div id="dayReleaseList" class="day-release-list"></div>
       </article>
     </div>
+
+    <div id="configModal" class="modal" hidden>
+      <button id="configBackdrop" class="backdrop" type="button" aria-label="Konfiguration schließen"></button>
+      <article class="config-card">
+        <header class="config-header">
+          <div>
+            <span class="eyebrow">Calendarr</span>
+            <h2>Instanzen konfigurieren</h2>
+            <p>API-Keys werden sicher in deiner config.json gespeichert.</p>
+          </div>
+          <button id="closeConfig" class="close" type="button" aria-label="Schließen">×</button>
+        </header>
+
+        <div class="config-tabs" role="tablist" aria-label="Dienst auswählen">
+          <button class="config-tab active" type="button" data-config-service="sonarr" role="tab" aria-selected="true">
+            Sonarr
+          </button>
+          <button class="config-tab" type="button" data-config-service="radarr" role="tab" aria-selected="false">
+            Radarr
+          </button>
+        </div>
+
+        <form id="configForm">
+          <section class="config-panel active" data-config-panel="sonarr" role="tabpanel">
+            <div id="sonarrInstanceList" class="instance-list"></div>
+            <button class="add-instance" type="button" data-add-instance="sonarr">+ Sonarr-Instanz hinzufügen</button>
+          </section>
+          <section class="config-panel" data-config-panel="radarr" role="tabpanel" hidden>
+            <div id="radarrInstanceList" class="instance-list"></div>
+            <button class="add-instance" type="button" data-add-instance="radarr">+ Radarr-Instanz hinzufügen</button>
+          </section>
+          <p id="configStatus" class="config-status" aria-live="polite"></p>
+          <footer class="config-actions">
+            <button id="cancelConfig" type="button">Abbrechen</button>
+            <button id="saveConfig" class="save-config" type="submit">In config.json speichern</button>
+          </footer>
+        </form>
+      </article>
+    </div>
     <script src="/api/settings.js"></script>
-    <script src="/app.js?v=calendarr-1" defer></script>
+    <script src="/app.js?v=calendarr-2" defer></script>
   </body>
 </html>

@@ -1,5 +1,5 @@
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
-import { readFile } from "node:fs/promises";
+import { readFile, rename, writeFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 
 const port = Number(process.env.PORT ?? 3000);
@@ -8,10 +8,13 @@ const configFile = process.env.CONFIG_FILE ?? "/config/config.json";
 
 type ServiceName = "sonarr" | "radarr";
 
+class ClientError extends Error {}
+
 interface ServiceConfig {
   name?: string;
   url: string;
   apiKey: string;
+  color?: string;
 }
 
 interface CalendarResult {
@@ -62,11 +65,18 @@ function validateInstances(
       typeof instance !== "object" || instance === null ||
       !("url" in instance) || !("apiKey" in instance) ||
       typeof instance.url !== "string" || typeof instance.apiKey !== "string" ||
-      ("name" in instance && instance.name !== undefined && typeof instance.name !== "string")
+      ("name" in instance && instance.name !== undefined && typeof instance.name !== "string") ||
+      ("color" in instance && instance.color !== undefined &&
+        (typeof instance.color !== "string" || !/^#[0-9a-f]{6}$/i.test(instance.color)))
     ) {
-      throw new Error(`${serviceName}Instances entry ${index + 1} needs string values for url and apiKey`);
+      throw new Error(`${serviceName}Instances entry ${index + 1} is invalid`);
     }
-    return { url: instance.url, apiKey: instance.apiKey, name: instance.name };
+    return {
+      url: instance.url,
+      apiKey: instance.apiKey,
+      name: instance.name,
+      color: instance.color,
+    };
   });
 }
 
@@ -138,6 +148,109 @@ async function loadConfig(): Promise<AppConfig> {
   }
 }
 
+async function readRequestBody(request: IncomingMessage): Promise<unknown> {
+  let body = "";
+  for await (const chunk of request) {
+    body += chunk.toString();
+    if (body.length > 256_000) throw new ClientError("Request body is too large");
+  }
+  try {
+    return JSON.parse(body);
+  } catch {
+    throw new ClientError("Request body must be valid JSON");
+  }
+}
+
+function sanitizeConfig(config: AppConfig): unknown {
+  const sanitizeInstances = (instances: ServiceConfig[]) => instances.map((instance, configIndex) => ({
+    configIndex,
+    name: instance.name ?? "",
+    url: instance.url,
+    apiKey: "",
+    hasApiKey: Boolean(instance.apiKey),
+    color: instance.color,
+  }));
+
+  return {
+    sonarrInstances: sanitizeInstances(config.sonarrInstances),
+    radarrInstances: sanitizeInstances(config.radarrInstances),
+  };
+}
+
+function validateConfigUpdateInstances(
+  serviceName: ServiceName,
+  value: unknown,
+  existingInstances: ServiceConfig[],
+  fallbackColor: string,
+): ServiceConfig[] {
+  if (!Array.isArray(value)) throw new ClientError(`${serviceName}Instances must be an array`);
+  const usedIndexes = new Set<number>();
+
+  return value.map((rawInstance, index) => {
+    if (typeof rawInstance !== "object" || rawInstance === null) {
+      throw new ClientError(`${serviceName} instance ${index + 1} is invalid`);
+    }
+    const instance = rawInstance as Record<string, unknown>;
+    const name = typeof instance.name === "string" ? instance.name.trim() : "";
+    const rawUrl = typeof instance.url === "string" ? instance.url.trim().replace(/\/+$/, "") : "";
+    const url = rawUrl && !/^https?:\/\//i.test(rawUrl) ? `http://${rawUrl}` : rawUrl;
+    const submittedApiKey = typeof instance.apiKey === "string" ? instance.apiKey.trim() : "";
+    const color = typeof instance.color === "string" ? instance.color.trim() : fallbackColor;
+    const configIndex = typeof instance.configIndex === "number" && Number.isInteger(instance.configIndex)
+      ? instance.configIndex
+      : undefined;
+
+    if (!name) throw new ClientError(`${serviceName} instance ${index + 1} needs a name`);
+    try {
+      const parsedUrl = new URL(url);
+      if (!["http:", "https:"].includes(parsedUrl.protocol)) throw new Error();
+    } catch {
+      throw new ClientError(`${serviceName} instance ${index + 1} needs a valid HTTP(S) URL`);
+    }
+    if (!/^#[0-9a-f]{6}$/i.test(color)) {
+      throw new ClientError(`${serviceName} instance ${index + 1} needs a valid color`);
+    }
+    if (configIndex !== undefined) {
+      if (!existingInstances[configIndex] || usedIndexes.has(configIndex)) {
+        throw new ClientError(`${serviceName} instance ${index + 1} has an invalid reference`);
+      }
+      usedIndexes.add(configIndex);
+    }
+    const apiKey = submittedApiKey || (configIndex !== undefined ? existingInstances[configIndex].apiKey : "");
+    if (!apiKey) throw new ClientError(`${serviceName} instance ${index + 1} needs an API key`);
+
+    return { name, url, apiKey, color };
+  });
+}
+
+async function updateConfig(request: IncomingMessage): Promise<AppConfig> {
+  const submitted = await readRequestBody(request);
+  if (typeof submitted !== "object" || submitted === null) {
+    throw new ClientError("Configuration must be an object");
+  }
+  const body = submitted as Record<string, unknown>;
+  const current = await loadConfig();
+  const updated: AppConfig = {
+    sonarrInstances: validateConfigUpdateInstances(
+      "sonarr",
+      body.sonarrInstances,
+      current.sonarrInstances,
+      current.settings.colors.sonarr,
+    ),
+    radarrInstances: validateConfigUpdateInstances(
+      "radarr",
+      body.radarrInstances,
+      current.radarrInstances,
+      current.settings.colors.radarr,
+    ),
+    settings: current.settings,
+  };
+  const temporaryFile = `${configFile}.tmp`;
+  await writeFile(temporaryFile, `${JSON.stringify(updated, null, 2)}\n`, { mode: 0o600 });
+  await rename(temporaryFile, configFile);
+  return updated;
+}
+
 const contentTypes: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -190,13 +303,23 @@ async function proxyCalendar(
       }
 
       const serviceUrl = new URL(service.url);
+      const sourceLocation = {
+        protocol: serviceUrl.protocol,
+        port: serviceUrl.port,
+        pathname: serviceUrl.pathname,
+      };
       return {
-        sourceLocation: {
-          protocol: serviceUrl.protocol,
-          port: serviceUrl.port,
-          pathname: serviceUrl.pathname,
-        },
-        items,
+        sourceLocation,
+        items: items.map((item) => typeof item === "object" && item !== null
+          ? {
+            ...item,
+            _calendarr: {
+              name: service.name ?? serviceUrl.hostname,
+              color: service.color,
+              sourceLocation,
+            },
+          }
+          : item),
       };
     } catch (error) {
       return error instanceof Error ? error : new Error(`Could not reach ${serviceName}`);
@@ -256,6 +379,18 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
       return;
     }
 
+    if (requestUrl.pathname === "/api/config" && request.method === "GET") {
+      const config = await loadConfig();
+      json(response, 200, sanitizeConfig(config));
+      return;
+    }
+
+    if (requestUrl.pathname === "/api/config" && request.method === "PUT") {
+      const config = await updateConfig(request);
+      json(response, 200, { status: "saved", config: sanitizeConfig(config) });
+      return;
+    }
+
     if (requestUrl.pathname === "/api/health") {
       await loadConfig();
       json(response, 200, { status: "ok" });
@@ -263,7 +398,7 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Configuration error";
-    json(response, 500, { error: message });
+    json(response, error instanceof ClientError ? 400 : 500, { error: message });
     return;
   }
 
