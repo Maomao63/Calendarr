@@ -148,7 +148,8 @@ function createBrowserServiceUrl(location) {
   if (!location?.protocol) return undefined;
   const port = location.port ? `:${location.port}` : "";
   const pathname = location.pathname || "/";
-  return `${location.protocol}//${window.location.hostname}${port}${pathname}`;
+  const hostname = location.hostname || window.location.hostname;
+  return `${location.protocol}//${hostname}${port}${pathname}`;
 }
 
 function normalizeEvents(service, items, sourceLocation) {

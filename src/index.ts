@@ -18,7 +18,7 @@ interface ServiceConfig {
 }
 
 interface CalendarResult {
-  sourceLocation: { protocol: string; port: string; pathname: string };
+  sourceLocation: { protocol: string; hostname: string; port: string; pathname: string };
   items: unknown[];
 }
 
@@ -305,6 +305,7 @@ async function proxyCalendar(
       const serviceUrl = new URL(service.url);
       const sourceLocation = {
         protocol: serviceUrl.protocol,
+        hostname: serviceUrl.hostname,
         port: serviceUrl.port,
         pathname: serviceUrl.pathname,
       };
