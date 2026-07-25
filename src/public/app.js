@@ -257,6 +257,11 @@ function showDayListPreview(date, events, clientX, clientY) {
     sub.textContent = event.subtitle;
     copy.append(title, sub);
     item.append(bar, poster, copy);
+    item.addEventListener("click", () => {
+      hideDayListPreview();
+      openDetails(event);
+    });
+    item.style.cursor = "pointer";
     items.append(item);
   });
   dayListPreview.hidden = false;
