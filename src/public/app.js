@@ -412,9 +412,11 @@ function render() {
     dayEvents.forEach((event) => {
       const button = document.createElement("button");
       button.className = `event ${event.service}`;
-      button.innerHTML = `<i class="event-bar"></i><span class="event-copy"><span class="event-title"></span><span class="event-subtitle"></span></span>`;
+      const bgStyle = event.poster ? `background-image: linear-gradient(0deg,rgba(10,14,22,.6),transparent),url('${event.poster.replace(/'/g, "%27")}')` : "";
+      button.innerHTML = `<i class="event-bar"></i><div class="event-poster" style="${bgStyle}"></div><span class="event-copy"><span class="event-title"></span><span class="event-subtitle"></span><span class="event-overview"></span></span>`;
       button.querySelector(".event-title").textContent = event.title;
       button.querySelector(".event-subtitle").textContent = event.subtitle;
+      button.querySelector(".event-overview").textContent = event.overview;
       button.querySelector(".event-bar").style.background = eventColor(event);
       attachHoverPreview(button, event);
       button.addEventListener("click", () => openDetails(event));
