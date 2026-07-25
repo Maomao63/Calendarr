@@ -418,7 +418,9 @@ function render() {
       button.querySelector(".event-subtitle").textContent = event.subtitle;
       button.querySelector(".event-overview").textContent = event.overview;
       button.querySelector(".event-bar").style.background = eventColor(event);
-      attachHoverPreview(button, event);
+      if (state.view === "month") {
+        attachHoverPreview(button, event);
+      }
       button.addEventListener("click", () => openDetails(event));
       eventList.append(button);
     });
