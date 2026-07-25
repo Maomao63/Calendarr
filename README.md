@@ -15,19 +15,7 @@
 - **No Database**: Completely stateless on the backend—everything is stored in a simple `config.json`. Configuration is handled entirely via the built-in UI!
 - **Direct Links**: Click on any release to instantly open it in the respective Sonarr/Radarr instance.
 
----
 
-## 📸 Screenshots
-
-*(Add screenshots here)*
-
-| Month View | Dots View |
-|:---:|:---:|
-| ![Month View](docs/month-view.png) | ![Dots View](docs/dots-view.png) |
-
-| Embedded in Dashboard | Settings Modal |
-|:---:|:---:|
-| ![Iframe View](docs/iframe-view.png) | ![Settings](docs/settings.png) |
 
 ---
 
