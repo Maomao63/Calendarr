@@ -73,6 +73,10 @@ let dayListPreviewTimer;
 
 document.body.classList.toggle("embedded", isEmbedded);
 
+dayListPreview.addEventListener("mouseenter", () => window.clearTimeout(dayListPreviewTimer));
+dayListPreview.addEventListener("mouseleave", hideDayListPreview);
+
+
 function applyColors() {
   document.documentElement.style.setProperty("--sonarr", state.colors.sonarr);
   document.documentElement.style.setProperty("--radarr", state.colors.radarr);
@@ -221,8 +225,10 @@ function hideHoverPreview() {
 
 function hideDayListPreview() {
   window.clearTimeout(dayListPreviewTimer);
-  dayListPreview.hidden = true;
-  dayListPreview.setAttribute("aria-hidden", "false");
+  dayListPreviewTimer = window.setTimeout(() => {
+    dayListPreview.hidden = true;
+    dayListPreview.setAttribute("aria-hidden", "true");
+  }, 200);
 }
 
 function showDayListPreview(date, events, clientX, clientY) {
