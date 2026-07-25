@@ -23,11 +23,11 @@
 
 | Month View | Dots View |
 |:---:|:---:|
-| ![Month View](https://placehold.co/600x350/121722/ffffff.png?text=Month+View) | ![Dots View](https://placehold.co/600x350/121722/ffffff.png?text=Dots+View) |
+| ![Month View](docs/month-view.png) | ![Dots View](docs/dots-view.png) |
 
 | Embedded in Dashboard | Settings Modal |
 |:---:|:---:|
-| ![Iframe View](https://placehold.co/600x350/121722/ffffff.png?text=Dashboard+Iframe) | ![Settings](https://placehold.co/600x350/121722/ffffff.png?text=Configuration) |
+| ![Iframe View](docs/iframe-view.png) | ![Settings](docs/settings.png) |
 
 ---
 
