@@ -116,7 +116,9 @@ function updateTranslations() {
   document.querySelector("#langSelect").value = currentLang;
   
   if (state.events && state.events.length) {
-      status.textContent = state.config ? `${state.events.length} ${state.events.length === 1 ? t("releaseSingular") : t("releasePlural")} · ` + t("servicesConnected", state.config.sonarrInstances.length + state.config.radarrInstances.length > 0 ? (state.config.sonarrInstances.length > 0 ? 1 : 0) + (state.config.radarrInstances.length > 0 ? 1 : 0) : 0) : t("configureServices");
+    const connected = (state.config.sonarrInstances.length > 0 ? 1 : 0) + (state.config.radarrInstances.length > 0 ? 1 : 0);
+    const countText = `${state.events.length} ${state.events.length === 1 ? t("releaseSingular") : t("releasePlural")}`;
+    status.textContent = state.config ? `${countText} · ${t("servicesConnected", connected)}` : t("configureServices");
   } else if (!state.config) {
       status.textContent = t("configureServices");
   }
@@ -208,22 +210,12 @@ const addDays = (date, amount) => {
 const startOfWeek = (date) => addDays(new Date(date.getFullYear(), date.getMonth(), date.getDate()), -((date.getDay() + 6) % 7));
 
 function getVisibleRange() {
-  if (state.view === "day") {
-    const start = new Date(state.date.getFullYear(), state.date.getMonth(), state.date.getDate());
-    return { start, end: addDays(start, 1) };
-  }
-  if (state.view === "three") {
-    const start = new Date(state.date.getFullYear(), state.date.getMonth(), state.date.getDate());
-    return { start, end: addDays(start, 3) };
-  }
-  if (state.view === "week") {
-    const start = startOfWeek(state.date);
-    return { start, end: addDays(start, 7) };
-  }
-  return {
-    start: new Date(state.date.getFullYear(), state.date.getMonth(), 1),
-    end: new Date(state.date.getFullYear(), state.date.getMonth() + 1, 1),
-  };
+  const d = state.date;
+  const today = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  if (state.view === "day") return { start: today, end: addDays(today, 1) };
+  if (state.view === "three") return { start: today, end: addDays(today, 3) };
+  if (state.view === "week") { const s = startOfWeek(d); return { start: s, end: addDays(s, 7) }; }
+  return { start: new Date(d.getFullYear(), d.getMonth(), 1), end: new Date(d.getFullYear(), d.getMonth() + 1, 1) };
 }
 
 function getDisplayDates() {

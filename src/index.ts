@@ -50,33 +50,21 @@ const defaultSettings: UiSettings = {
   },
 };
 
-function validateInstances(
-  serviceName: ServiceName,
-  value: unknown,
-): ServiceConfig[] {
+function isValidInstance(instance: unknown): instance is { url: string; apiKey: string; name?: string; color?: string } {
+  if (typeof instance !== "object" || instance === null) return false;
+  const obj = instance as Record<string, unknown>;
+  return typeof obj.url === "string" &&
+    typeof obj.apiKey === "string" &&
+    (obj.name === undefined || typeof obj.name === "string") &&
+    (obj.color === undefined || (typeof obj.color === "string" && /^#[0-9a-f]{6}$/i.test(obj.color)));
+}
+
+function validateInstances(serviceName: ServiceName, value: unknown): ServiceConfig[] {
   if (value === undefined) return [];
-
-  if (!Array.isArray(value)) {
-    throw new Error(`${serviceName}Instances must be an array`);
-  }
-
+  if (!Array.isArray(value)) throw new Error(`${serviceName}Instances must be an array`);
   return value.map((instance, index) => {
-    if (
-      typeof instance !== "object" || instance === null ||
-      !("url" in instance) || !("apiKey" in instance) ||
-      typeof instance.url !== "string" || typeof instance.apiKey !== "string" ||
-      ("name" in instance && instance.name !== undefined && typeof instance.name !== "string") ||
-      ("color" in instance && instance.color !== undefined &&
-        (typeof instance.color !== "string" || !/^#[0-9a-f]{6}$/i.test(instance.color)))
-    ) {
-      throw new Error(`${serviceName}Instances entry ${index + 1} is invalid`);
-    }
-    return {
-      url: instance.url,
-      apiKey: instance.apiKey,
-      name: instance.name,
-      color: instance.color,
-    };
+    if (!isValidInstance(instance)) throw new Error(`${serviceName}Instances entry ${index + 1} is invalid`);
+    return { url: instance.url, apiKey: instance.apiKey, name: instance.name, color: instance.color };
   });
 }
 
@@ -270,11 +258,7 @@ async function proxyCalendar(
   response: ServerResponse,
 ): Promise<void> {
   const config = await loadConfig();
-  const services: Record<ServiceName, ServiceConfig[]> = {
-    sonarr: config.sonarrInstances,
-    radarr: config.radarrInstances,
-  };
-  const instances = services[serviceName];
+  const instances = serviceName === "sonarr" ? config.sonarrInstances : config.radarrInstances;
   if (!instances.length) {
     json(response, 200, { configured: false, items: [] });
     return;
